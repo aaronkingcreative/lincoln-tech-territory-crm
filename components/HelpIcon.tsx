@@ -12,9 +12,8 @@ export const HELP_TEXT: Record<string, string> = {
   'Districts page': 'Review district-level offices, websites, and contacts that may help reach multiple schools.',
   'Contacts page': 'Review discovered and manually added people. Prioritize principals, counselors, and CTE/shop contacts.',
   'Map page': 'Use the map for territory awareness. Approximate city markers are labeled and are not exact driving directions.',
-  'Discover page': 'Admin tools for guided discovery. Run batches, then review what changed and what still needs manual work.',
-  'Import Territory Schools': 'Seeds the approved school roster so baseline coverage can be measured against expected territory schools.',
-  'Run School Import': 'Imports the approved territory school list. Run this when the baseline roster needs to be seeded or refreshed.',
+  'How to use Discovery': 'Discovery helps fill missing data after the approved school roster is loaded. First, use Discover Schools and Districts to confirm the territory list. Then use Discover School Websites to look for official school and district websites. Then use Discover Contacts to queue staff/contact pages that may contain principals, counselors, CTE teachers, shop teachers, and career contacts. Run Next Crawl Batch processes a small group of queued pages at a time. Run it more than once until the pending queue reaches 0, or until several runs stop finding anything useful.\n\nMini workflow:\n1. Run Discover Schools and Districts.\n2. Run Discover School Websites.\n3. Run Discover Contacts.\n4. Run Next Crawl Batch.\n5. Review what changed.\n6. Repeat crawl batches if the pending queue still has items.\n7. Use manual updates or AI Assisted Update for anything the crawler cannot find.',
+  'What does Run a School Import do?': 'Use this when the approved school list has been changed or expanded. For example, if Ada County is added to the territory, this button loads those new schools and districts into the website. It is safe to run again because it updates existing records instead of creating duplicates. This does not search the web for contacts. After running it, check Territory Coverage Review to confirm the schools are included.',
   'Discover Schools and Districts': 'Finds or verifies approved districts and schools from the known territory roster.',
   'Discover School Websites': 'Looks for official school websites and queues likely pages for review.',
   'Discover Contacts': 'Queues staff and contact pages for principal, counselor, CTE, shop, and trades contact discovery.',
@@ -24,7 +23,7 @@ export const HELP_TEXT: Record<string, string> = {
   'Missing Data': 'Highlights schools missing phone, website, principal, counselor, CTE/shop contacts, or source information.',
   'Contact Logs': 'Call and outreach notes that show what happened, when, by whom, and what follow-up is needed.',
   'Follow-up Dates': 'Dates Ken should revisit a school or contact after a call, email, or visit.',
-  'AI JSON Import': 'Paste JSON created from Ken/Aaron-provided notes. The importer validates, previews, and imports without inventing contacts.',
+  'What is AI Assisted Update?': 'This tool lets you use ChatGPT to prepare updates for the website. For example, you can tell ChatGPT, ‘Add this counselor to Boise High School’ or paste a copied staff page and ask ChatGPT to format the useful contacts for this website. Then paste the result here. The website will check it, show a preview, and let you approve it before saving. This is useful when the crawler cannot find something automatically or when you learn new information from a phone call.',
 };
 export default function HelpIcon({ topic }: { topic: string }) {
   const [open, setOpen] = useState(false);
@@ -47,7 +46,7 @@ export default function HelpIcon({ topic }: { topic: string }) {
     <button type="button" onClick={() => setOpen(!open)} className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/50 bg-slate-950 text-sm font-bold text-sky-200" aria-label={`Help: ${topic}`} aria-expanded={open} aria-controls={id}>?</button>
     {open ? <>
       <button type="button" aria-label="Close help" className="fixed inset-0 z-40 cursor-default bg-slate-950/60 sm:hidden" onClick={() => setOpen(false)} />
-      <span id={id} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="fixed inset-x-4 top-1/2 z-50 max-h-[min(80dvh,640px)] -translate-y-1/2 overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-sm font-normal text-slate-200 shadow-2xl sm:absolute sm:inset-auto sm:right-0 sm:top-10 sm:max-h-[70vh] sm:w-80 sm:max-w-[calc(100vw-2rem)] sm:translate-y-0 sm:p-3">
+      <span id={id} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="fixed inset-x-4 top-1/2 z-50 max-h-[min(80dvh,640px)] -translate-y-1/2 overflow-y-auto whitespace-pre-line rounded-2xl border border-slate-700 bg-slate-950 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-sm font-normal text-slate-200 shadow-2xl sm:absolute sm:inset-auto sm:right-0 sm:top-10 sm:max-h-[70vh] sm:w-80 sm:max-w-[calc(100vw-2rem)] sm:translate-y-0 sm:p-3">
         <span className="flex items-start justify-between gap-3">
           <b id={`${id}-title`} className="block text-base text-sky-200 sm:text-sm">{topic}</b>
           <button type="button" onClick={() => setOpen(false)} className="-mr-1 -mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-lg text-slate-100 sm:min-h-9 sm:min-w-9" aria-label="Close help">×</button>

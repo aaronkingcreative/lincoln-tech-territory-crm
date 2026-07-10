@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 const primaryLinks = [['/','Dashboard'],['/schools','Schools'],['/coverage','Coverage'],['/admin/territory-review','Tasks']] as const;
-const moreLinks = [['/districts','Districts'],['/contacts','Contacts'],['/map','Map'],['/admin/discover','Discover'],['/admin/import-schools','Import'],['/admin/json-import','AI Import']] as const;
+const moreLinks = [['/districts','Districts'],['/contacts','Contacts'],['/map','Map'],['/admin/discover','Discover'],['/admin/import-schools','Run a School Import'],['/admin/json-import','AI Assisted Update']] as const;
 const desktopLinks = [...primaryLinks, ...moreLinks] as const;
 
 export default function Nav(){
