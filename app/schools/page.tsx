@@ -1,5 +1,17 @@
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-import { getRows } from '@/lib/data';
-import { DataTable } from '@/components/DataTable';
-export default async function Page(){ const rows = await getRows('schools'); return <main className="mx-auto max-w-7xl p-6"><h1 className="mb-4 text-2xl font-bold capitalize">schools</h1><DataTable rows={rows as Record<string, unknown>[]} /></main> }
+import Link from 'next/link';
+import { getTerritoryData, missingItems } from '@/lib/coverage';
+
+function Badge({ children, tone = 'amber' }: { children: React.ReactNode; tone?: 'amber' | 'emerald' | 'sky' }) {
+  const cls = tone === 'emerald' ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200' : tone === 'sky' ? 'border-sky-500/40 bg-sky-500/15 text-sky-100' : 'border-amber-500/40 bg-amber-500/15 text-amber-100';
+  return <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}>{children}</span>;
+}
+const tel = (phone?: string | null) => phone ? <a className="inline-flex min-h-11 items-center rounded-lg bg-slate-800 px-3 font-semibold text-sky-200 hover:bg-slate-700" href={`tel:${phone.replace(/[^+\d]/g, '')}`}>{phone}</a> : <span className="text-amber-200">Phone missing. Needs discovery or manual entry.</span>;
+
+export default async function Page(){
+  const { schools, contacts } = await getTerritoryData();
+  const rows = schools.map((s) => ({ s, miss: missingItems(s, contacts) })).sort((a,b)=>String(a.s.county).localeCompare(String(b.s.county)) || String(a.s.districts?.name).localeCompare(String(b.s.districts?.name)) || String(a.s.name).localeCompare(String(b.s.name)));
+  return <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6"><div><p className="text-sm uppercase tracking-[.25em] text-sky-300">Recruiter Rolodex</p><h1 className="mt-2 text-3xl font-bold">Schools</h1><p className="mt-2 text-slate-400">Search by school, district, or county. Use the built-in browser find plus the quick filters below to focus on phone, website, principal, counselor, and CTE/shop gaps.</p></div>
+  <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><div className="mb-3 flex flex-wrap gap-2 text-sm"><Badge>Needs Attention</Badge><Badge tone="sky">Filters: missing phone · website · principal · counselor · CTE/shop</Badge><Badge tone="emerald">Tap phone to call</Badge></div><div className="overflow-x-auto"><table className="min-w-[1100px] w-full text-sm"><thead className="text-slate-300"><tr>{['School','District','County','Phone','Website','Missing fields','Recruiter actions'].map(h=><th key={h} className="p-3 text-left">{h}</th>)}</tr></thead><tbody>{rows.map(({s,miss})=><tr key={s.id} className="border-t border-slate-800 align-top"><td className="p-3 font-semibold">{s.name}{miss.length ? <div className="mt-2"><Badge>Needs Attention</Badge></div> : <div className="mt-2"><Badge tone="emerald">Ready for outreach</Badge></div>}</td><td className="p-3">{s.districts?.name}</td><td className="p-3">{s.county}</td><td className="p-3">{tel(s.phone)}</td><td className="p-3">{s.website ? <a className="text-sky-300 underline" href={s.website} target="_blank">Website</a> : <span className="text-amber-200">Missing website</span>}</td><td className="p-3 text-amber-100">{miss.join(', ') || 'None flagged'}</td><td className="p-3"><div className="flex flex-wrap gap-2"><Link href={`/schools#${s.id}`} className="min-h-11 rounded-lg border border-slate-700 px-3 py-2">View</Link><Link href={`/schools#edit-${s.id}`} className="min-h-11 rounded-lg border border-slate-700 px-3 py-2">Edit</Link><Link href={`/schools#log-${s.id}`} className="min-h-11 rounded-lg bg-sky-400 px-3 py-2 font-semibold text-slate-950">Log call</Link><Link href={`/schools#note-${s.id}`} className="min-h-11 rounded-lg border border-slate-700 px-3 py-2">Add note</Link></div><p className="mt-2 text-xs text-slate-500">CRM fields: priority, status, notes, last contact, next follow-up.</p></td></tr>)}</tbody></table></div></div></main>
+}
