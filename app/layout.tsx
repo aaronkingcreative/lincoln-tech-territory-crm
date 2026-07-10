@@ -22,6 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link className="transition hover:text-sky-300" href="/contacts">
               Contacts
             </Link>
+            <Link className="transition hover:text-sky-300" href="/coverage">
+              Coverage
+            </Link>
             <Link className="transition hover:text-sky-300" href="/map">
               Map
             </Link>

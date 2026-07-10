@@ -1,39 +1,29 @@
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-import { dashboard } from '@/lib/data';
+import Link from 'next/link';
+import { buildCoverage, getTerritoryData, missingItems } from '@/lib/coverage';
 
-const queues = [
-  'missing principal',
-  'missing counselor',
-  'missing CTE/shop contact',
-  'missing email',
-  'broken website',
-  'source older than 12 months',
-  'low-confidence matches',
-];
+function Card({ label, value, sub }: { label: string; value: number | string; sub?: string }) { return <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-5 shadow-xl shadow-slate-950/30"><div className="text-3xl font-bold text-slate-50">{value}</div><div className="mt-1 text-sm font-medium text-slate-300">{label}</div>{sub ? <div className="mt-1 text-xs text-slate-500">{sub}</div> : null}</div>; }
+function Bar({ label, value, max }: { label: string; value: number; max: number }) { return <div><div className="mb-1 flex justify-between text-sm"><span>{label}</span><span className="text-slate-400">{value}</span></div><div className="h-2 rounded-full bg-slate-800"><div className="h-2 rounded-full bg-sky-400" style={{ width: `${max ? (value / max) * 100 : 0}%` }} /></div></div>; }
 
 export default async function Home() {
-  const d = await dashboard();
+  const { schools, districts, contacts, queue, runs } = await getTerritoryData();
+  const coverage = buildCoverage(schools, contacts);
+  const q = (s: string) => queue.filter((x) => x.status === s).length;
+  const withWebsite = schools.filter((s) => s.website).length, withSource = schools.filter((s) => s.source_url).length;
+  const missing = (name: string) => schools.filter((s) => missingItems(s, contacts).includes(name)).length;
+  const counties = [...schools.reduce((m, s) => m.set(s.county ?? 'Unknown', (m.get(s.county ?? 'Unknown') ?? 0) + 1), new Map<string, number>())].sort((a,b)=>b[1]-a[1]);
+  const needs = schools.map((s) => ({ s, miss: missingItems(s, contacts) })).filter((x) => x.miss.length).sort((a,b)=>b.miss.length-a.miss.length).slice(0,12);
+  const completeDistricts = coverage.filter((d) => d.missingCount === 0).length;
+  const expectedSchools = coverage.reduce((n,d)=>n+d.expectedCount,0), foundExpected = coverage.reduce((n,d)=>n+d.foundCount,0);
+  const chart = [ ['Complete enough', schools.filter((s)=>missingItems(s,contacts).length<=2).length, 'bg-emerald-400'], ['Missing website', missing('website'), 'bg-sky-400'], ['Missing phone', missing('phone'), 'bg-amber-400'], ['Missing source', missing('source URL'), 'bg-violet-400'], ['Missing contacts', schools.filter((s)=>!contacts.some((c)=>c.school_id===s.id)).length, 'bg-rose-400'], ['Missing CTE/shop', missing('CTE/shop contact'), 'bg-orange-400'] ] as const;
+  const lastRun = runs[0];
 
-  return (
-    <main className="mx-auto max-w-7xl p-6">
-      <h1 className="text-3xl font-bold text-slate-100">Lincoln Tech Idaho Territory Recruiting Manager</h1>
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        {Object.entries(d).map(([k, v]) => (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-slate-950/30" key={k}>
-            <div className="text-3xl font-bold text-slate-100">{v}</div>
-            <div className="capitalize text-slate-400">{k}</div>
-          </div>
-        ))}
-      </div>
-      <h2 className="mt-8 text-xl font-semibold text-slate-100">Review queue</h2>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
-        {queues.map((q) => (
-          <div className="rounded border border-slate-800 bg-slate-900 p-4 text-slate-300 shadow-lg shadow-slate-950/20" key={q}>
-            {q}
-          </div>
-        ))}
-      </div>
-    </main>
-  );
+  return <main className="mx-auto max-w-7xl space-y-8 p-6"><section><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm uppercase tracking-[.25em] text-sky-300">Territory intelligence</p><h1 className="mt-2 text-4xl font-bold text-slate-100">Recruiting coverage dashboard</h1><p className="mt-2 max-w-3xl text-slate-400">Live Supabase counts, expected-vs-found coverage, and crawl readiness for the approved Lincoln Tech territory.</p></div><Link href="/coverage" className="rounded-xl bg-sky-400 px-4 py-2 font-semibold text-slate-950">Open coverage review</Link></div></section>
+  <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[
+    ['Total Schools', schools.length], ['Total Districts', districts.length], ['Total Contacts', contacts.length], ['Schools with Website', withWebsite], ['Schools Missing Website', schools.length-withWebsite], ['Schools with Source URL', withSource], ['Schools Missing Source URL', schools.length-withSource], ['Schools Missing Phone', missing('phone')], ['Schools Missing Principal', missing('principal')], ['Schools Missing Counselor', missing('counselor')], ['Schools Missing CTE/Shop Contact', missing('CTE/shop contact')], ['Crawl Queue Pending', q('pending')], ['Crawl Queue Complete', q('complete')], ['Crawl Queue Failed', q('failed')]
+  ].map(([label, value]) => <Card key={label} label={String(label)} value={value as number} />)}</section>
+  <section className="grid gap-4 lg:grid-cols-3"><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Last crawl activity</h2><p className="mt-3 text-sm text-slate-300">{lastRun ? `${lastRun.run_type} · ${lastRun.status} · ${lastRun.started_at}` : 'No discovery run recorded yet.'}</p></div><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">District coverage</h2><div className="mt-3 text-3xl font-bold">{coverage.length ? Math.round(completeDistricts/coverage.length*100) : 0}%</div><Bar label={`${completeDistricts} complete of ${coverage.length} expected districts`} value={completeDistricts} max={coverage.length}/></div><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Expected school coverage</h2><div className="mt-3 text-3xl font-bold">{expectedSchools ? Math.round(foundExpected/expectedSchools*100) : 0}%</div><Bar label={`${foundExpected} found of ${expectedSchools} expected schools`} value={foundExpected} max={expectedSchools}/></div></section>
+  <section className="grid gap-4 lg:grid-cols-3"><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-4 font-semibold">Completeness mix</h2>{chart.map(([l,v,c])=><Bar key={l} label={l} value={v} max={Math.max(1, schools.length)}/>)}</div><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-4 font-semibold">Schools by county</h2>{counties.map(([l,v])=><Bar key={l} label={l} value={v} max={counties[0]?.[1] ?? 1}/>)}</div><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-4 font-semibold">District completeness</h2>{coverage.slice(0,10).map((d)=><Bar key={d.district} label={d.district} value={d.foundCount} max={d.expectedCount}/>)}</div></section>
+  <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="text-xl font-semibold">Needs attention</h2><div className="mt-4 overflow-auto"><table className="min-w-full text-sm"><thead className="text-slate-400"><tr><th className="p-2 text-left">School</th><th className="p-2 text-left">District</th><th className="p-2 text-left">County</th><th className="p-2 text-left">Missing items</th><th className="p-2 text-left">Recommended next action</th></tr></thead><tbody>{needs.map(({s,miss})=><tr key={s.id} className="border-t border-slate-800"><td className="p-2">{s.name}</td><td className="p-2">{s.districts?.name ?? ''}</td><td className="p-2">{s.county}</td><td className="p-2 text-amber-200">{miss.join(', ')}</td><td className="p-2 text-slate-300">{miss.includes('website') ? 'Run website discovery or manually verify official site.' : miss.includes('CTE/shop contact') ? 'Queue contact discovery for CTE/shop staff.' : 'Review official pages and verify fields.'}</td></tr>)}</tbody></table></div></section></main>;
 }
