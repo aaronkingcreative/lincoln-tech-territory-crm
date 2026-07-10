@@ -19,6 +19,7 @@ export default function MapPage() {
   useEffect(() => {
     if (!el) return;
 
+    const mapElement = el;
     let cancelled = false;
     let map: import('leaflet').Map | null = null;
 
@@ -26,7 +27,7 @@ export default function MapPage() {
       const L = await import('leaflet');
       if (cancelled) return;
 
-      map = L.map(el).setView([43.6, -113.2], 7);
+      map = L.map(mapElement).setView([43.6, -113.2], 7);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
