@@ -78,23 +78,39 @@ export default function Login() {
   }
 
   return (
-    <main className="mx-auto mt-20 max-w-md rounded-xl bg-white p-8 shadow">
-      <h1 className="text-2xl font-bold">Admin login</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Private access for approved administrators only. Public signup is disabled by policy.
-      </p>
+    <main className="mx-auto mt-20 max-w-md rounded-xl border border-slate-800 bg-slate-900 p-8 shadow-2xl shadow-slate-950/40">
+      <h1 className="text-2xl font-bold text-slate-100">Admin login</h1>
+      <div className="mt-4 space-y-4 text-sm leading-6 text-slate-300">
+        <p>Private access for approved administrators only.</p>
+        <p>
+          After entering your email, look for an email with this sender:{' '}
+          <span className="font-medium text-slate-100">Supabase Auth &lt;noreply@mail.app.supabase.io&gt;</span>
+        </p>
+        <p>
+          Subject line: <span className="font-medium text-slate-100">Your sign-in link</span>
+        </p>
+        <p>The message may look generic, but it is the official secure sign-in email for this CRM.</p>
+        <p>Check spam, promotions, or updates if it does not arrive within one minute.</p>
+      </div>
       <input
-        className="mt-6 w-full rounded border p-3"
+        className="mt-6 w-full rounded border border-slate-700 bg-slate-950 p-3 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         placeholder="admin email"
       />
-      <button onClick={login} className="mt-4 w-full rounded bg-slate-900 p-3 text-white">
-        Send magic link
+      <button
+        onClick={login}
+        className="mt-4 w-full rounded bg-sky-600 p-3 font-semibold text-white shadow-lg shadow-sky-950/30 transition hover:bg-sky-500"
+      >
+        Send secure sign-in link
       </button>
-      {checkingSession && <p className="mt-4 text-slate-600">Checking login status...</p>}
-      {sent && <p className="mt-4 text-green-700">Check your email.</p>}
-      {error && <p className="mt-4 text-red-700">{error}</p>}
+      {checkingSession && <p className="mt-4 text-slate-400">Checking login status...</p>}
+      {sent && (
+        <p className="mt-4 rounded border border-emerald-800 bg-emerald-950/60 p-3 text-emerald-200">
+          Check your email for a sign-in link from Supabase Auth. The subject will be “Your sign-in link.”
+        </p>
+      )}
+      {error && <p className="mt-4 rounded border border-red-800 bg-red-950/60 p-3 text-red-200">{error}</p>}
     </main>
   );
 }
