@@ -17,9 +17,9 @@ export function expectedDistricts() {
 }
 
 export async function getTerritoryData() {
-  if (!hasSupabaseServiceCredentials()) return { schools: [] as DbRow[], districts: [] as DbRow[], contacts: [] as DbRow[], queue: [] as DbRow[], runs: [] as DbRow[], errors: [] as DbRow[], sources: [] as DbRow[] };
+  if (!hasSupabaseServiceCredentials()) return { schools: [] as DbRow[], districts: [] as DbRow[], contacts: [] as DbRow[], queue: [] as DbRow[], runs: [] as DbRow[], errors: [] as DbRow[], sources: [] as DbRow[], contactLogs: [] as DbRow[] };
   const db = createServiceClient();
-  const [schools, districts, contacts, queue, runs, errors, sources] = await Promise.all([
+  const [schools, districts, contacts, queue, runs, errors, sources, contactLogs] = await Promise.all([
     db.from('schools').select('*,districts(name,county)').limit(5000),
     db.from('districts').select('*').limit(1000),
     db.from('contacts').select('*').limit(10000),
@@ -27,9 +27,10 @@ export async function getTerritoryData() {
     db.from('discovery_runs').select('*').order('started_at', { ascending: false }).limit(20),
     db.from('crawl_errors').select('*').order('created_at', { ascending: false }).limit(500),
     db.from('source_urls').select('*').limit(5000),
+    db.from('contact_logs').select('*').order('contacted_at', { ascending: false }).limit(5000),
   ]);
   for (const r of [schools, districts, contacts, queue, runs, errors, sources]) if (r.error) throw r.error;
-  return { schools: schools.data ?? [], districts: districts.data ?? [], contacts: contacts.data ?? [], queue: queue.data ?? [], runs: runs.data ?? [], errors: errors.data ?? [], sources: sources.data ?? [] };
+  return { schools: schools.data ?? [], districts: districts.data ?? [], contacts: contacts.data ?? [], queue: queue.data ?? [], runs: runs.data ?? [], errors: errors.data ?? [], sources: sources.data ?? [], contactLogs: contactLogs.data ?? [] };
 }
 
 export function contactsForSchool(contacts: DbRow[], schoolId: string) { return contacts.filter((c) => c.school_id === schoolId); }
