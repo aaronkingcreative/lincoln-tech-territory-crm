@@ -1,30 +1,12 @@
 import { NextResponse } from 'next/server';
 import { utils, write } from 'xlsx';
-
-import { createServiceClient } from '@/lib/supabase';
-
-export const dynamic = "force-dynamic";
-
-export async function GET() {
-  try {
-    const db = createServiceClient();
-    const tables = ['districts', 'schools', 'contacts', 'programs', 'recruiting_notes'];
-    const wb = utils.book_new();
-
-    for (const table of tables) {
-      const { data, error } = await db.from(table).select('*');
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      utils.book_append_sheet(wb, utils.json_to_sheet(data ?? []), table.slice(0, 31));
-    }
-
-    const buf = write(wb, { type: 'buffer', bookType: 'xlsx' });
-    return new Response(buf, {
-      headers: {
-        'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'content-disposition': 'attachment; filename="lincoln-tech-territory.xlsx"',
-      },
-    });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Missing Supabase service credentials' }, { status: 500 });
-  }
-}
+import { buildCoverage, getTerritoryData, missingItems } from '@/lib/coverage';
+export const dynamic = 'force-dynamic';
+export async function GET(){try{const {schools,districts,contacts,queue,errors,sources}=await getTerritoryData();const coverage=buildCoverage(schools,contacts);const wb=utils.book_new();
+const add=(name:string,rows:Record<string,unknown>[])=>utils.book_append_sheet(wb,utils.json_to_sheet(rows),name.slice(0,31));
+add('Schools',schools);add('Districts',districts);add('Contacts',contacts);
+add('Coverage Summary',[{expected_districts:coverage.length,expected_schools:coverage.reduce((n,d)=>n+d.expectedCount,0),found_expected_schools:coverage.reduce((n,d)=>n+d.foundCount,0),missing_expected_schools:coverage.reduce((n,d)=>n+d.missingCount,0),schools_in_database:schools.length,contacts_in_database:contacts.length,pending_queue:queue.filter(q=>q.status==='pending').length,failed_queue:queue.filter(q=>q.status==='failed').length}]);
+add('District Coverage',coverage.map(d=>({district:d.district,county:d.county,expected_school_count:d.expectedCount,found_school_count:d.foundCount,missing_school_count:d.missingCount,schools_missing_contacts:d.missingContacts,needs_verification:d.needsVerification,completion_status:d.status})));
+add('School Gaps',schools.map(s=>{const miss=missingItems(s,contacts);return {school:s.name,district:(s.districts as any)?.name,county:s.county,missing_website:miss.includes('website'),missing_phone:miss.includes('phone'),missing_principal:miss.includes('principal'),missing_counselor:miss.includes('counselor'),missing_cte_shop_contact:miss.includes('CTE/shop contact'),missing_source_url:miss.includes('source URL'),missing_items:miss.join(', '),verification_status:s.verification_status,date_verified:s.date_verified,source_url:s.source_url}}).filter(r=>r.missing_items));
+add('Crawl Errors',errors);add('Source URLs',sources);add('Crawl Queue',queue);
+const buf=write(wb,{type:'buffer',bookType:'xlsx'});return new Response(buf,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="lincoln-tech-territory.xlsx"'}})}catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Missing Supabase service credentials'},{status:500})}}
