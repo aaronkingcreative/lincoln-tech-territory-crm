@@ -30,17 +30,22 @@ async function queueDiscoverySource(db: ReturnType<typeof createServiceClient>, 
     return { url: seed.target_url, action: 'skipped', reason: 'invalid URL' };
   }
 
+  url.hash = '';
+  url.protocol = url.protocol.toLowerCase();
+  url.hostname = url.hostname.toLowerCase();
+  url.pathname = url.pathname.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
   const targetUrl = url.toString();
   const sourceDomain = seed.source_domain ?? url.hostname.replace(/^www\./, '');
   const { data: existing, error: lookupError } = await db
     .from('crawl_queue')
     .select('id,status')
     .eq('target_url', targetUrl)
+    .eq('target_type', seed.target_type)
     .maybeSingle();
 
   if (lookupError) return { url: targetUrl, action: 'skipped', reason: `lookup failed: ${lookupError.message}` };
   if (existing?.id) {
-    if (existing.status === 'failed' || existing.status === 'skipped') {
+    if (false && (existing.status === 'failed' || existing.status === 'skipped')) {
       const { error: updateError } = await db
         .from('crawl_queue')
         .update({ status: 'pending', last_error: null, updated_at: new Date().toISOString() })
@@ -66,11 +71,12 @@ async function queueDiscoverySource(db: ReturnType<typeof createServiceClient>, 
 }
 
 async function getQueueCounts(db: ReturnType<typeof createServiceClient>) {
-  const { data } = await db.from('crawl_queue').select('status').in('status', ['pending', 'running', 'failed']);
-  return (data ?? []).reduce<Record<string, number>>((acc, row: any) => {
+  const { data } = await db.from('crawl_queue').select('status,target_type').limit(50000);
+  return (data ?? []).reduce<Record<string, any>>((acc, row: any) => {
     acc[row.status] = (acc[row.status] ?? 0) + 1;
+    acc.byType[row.target_type] = (acc.byType[row.target_type] ?? 0) + 1;
     return acc;
-  }, { pending: 0, running: 0, failed: 0 });
+  }, { pending: 0, running: 0, complete: 0, failed: 0, skipped: 0, byType: {} });
 }
 
 const ROLE_KEYWORDS = ['principal','assistant principal','counselor','head counselor','college and career','career center','cte director','cte coordinator','automotive','welding','construction','diesel','manufacturing','engineering','robotics','machining','woodworking','industrial technology','shop teacher'];
@@ -81,15 +87,14 @@ export async function getDiscoverStatus() {
     db.from('schools').select('id', { count: 'exact', head: true }),
     db.from('districts').select('id', { count: 'exact', head: true }),
     db.from('contacts').select('id', { count: 'exact', head: true }),
-    db.from('crawl_queue').select('status', { count: 'exact' }).limit(1000),
-    db.from('discovery_runs').select('*').order('started_at', { ascending: false }).limit(1).maybeSingle(),
+    db.from('crawl_queue').select('status,target_type', { count: 'exact' }).limit(50000),
+    db.from('discovery_runs').select('*').order('started_at', { ascending: false }).limit(10),
     db.from('crawl_errors').select('*').order('created_at', { ascending: false }).limit(25),
   ]);
-  const byStatus = (queue.data ?? []).reduce<Record<string, number>>((acc, row: any) => {
-    acc[row.status] = (acc[row.status] ?? 0) + 1;
-    return acc;
-  }, {});
-  return { counts: { schools: schools.count ?? 0, districts: districts.count ?? 0, contacts: contacts.count ?? 0 }, queue: { total: queue.count ?? 0, byStatus }, lastRun: lastRun.data, recentErrors: errors.data ?? [] };
+  const byStatus = (queue.data ?? []).reduce<Record<string, number>>((acc, row: any) => { acc[row.status] = (acc[row.status] ?? 0) + 1; return acc; }, { pending: 0, running: 0, complete: 0, failed: 0, skipped: 0 });
+  const byType = (queue.data ?? []).reduce<Record<string, number>>((acc, row: any) => { acc[row.target_type] = (acc[row.target_type] ?? 0) + 1; return acc; }, {});
+  const runs = lastRun.data ?? [];
+  return { counts: { schools: schools.count ?? 0, districts: districts.count ?? 0, contacts: contacts.count ?? 0 }, queue: { total: queue.count ?? 0, byStatus, byType }, lastRun: runs[0], recentRuns: runs, lastSuccessfulBatch: runs.find((r:any)=>r.run_type==='batch'&&r.status==='complete'), lastFailedBatch: runs.find((r:any)=>r.run_type==='batch'&&r.status==='failed'), stuckRunning: runs.filter((r:any)=>r.status==='running').length, recentErrors: errors.data ?? [] };
 }
 
 async function createRun(run_type: string) {
@@ -171,7 +176,7 @@ export async function runDiscoveryBatch(limit = 5) {
   const runId = await createRun('batch');
   const { data: items } = await db.from('crawl_queue').select('*').eq('status', 'pending').order('created_at').limit(limit);
   const initialQueueCounts = await getQueueCounts(db);
-  const summary = { runId, processed: 0, inserted: 0, updated: 0, skipped: 0, errors: [] as string[], queueCounts: initialQueueCounts, message: '' };
+  const summary = { runId, processed: 0, inserted: 0, updated: 0, skipped: 0, queued_new: 0, queued_duplicate_skipped: 0, queued_existing_skipped: 0, errors: [] as string[], queueCounts: initialQueueCounts, message: '' };
   if (!(items ?? []).length) {
     summary.message = initialQueueCounts.pending > 0
       ? 'No rows were selected even though pending crawl_queue rows exist; check the batch limit and queue query.'
@@ -193,16 +198,25 @@ export async function runDiscoveryBatch(limit = 5) {
       await db.from('source_urls').upsert({ school_id: item.school_id, district_id: item.district_id, url: item.target_url, page_title: title, http_status: res.status, last_crawled_at: new Date().toISOString(), is_official: true }, { onConflict: 'url' });
       await db.from('crawl_results').insert({ run_id: runId, queue_id: item.id, target_url: item.target_url, http_status: res.status, page_title: title, rows_inserted: 0, rows_updated: 1, rows_skipped: 0 });
       summary.updated++;
-      const linkQueueWrites: Promise<unknown>[] = [];
+      const linkQueueWrites: Promise<QueueResult>[] = [];
+      const seenLinks = new Set<string>();
+      const perDomain = new Map<string, number>();
       $('a[href]').each((_i, a) => {
         const text = $(a).text().toLowerCase(); const href = $(a).attr('href') ?? '';
         if (!LINK_KEYWORDS.some(k => text.includes(k) || href.toLowerCase().includes(k))) return;
         const url = absUrl(href, item.target_url); if (!url) return;
         const host = new URL(url).hostname.replace(/^www\./, '');
         if (!host.endsWith(item.source_domain) && !item.source_domain.endsWith(host)) return;
+        if (seenLinks.has(url)) { summary.queued_duplicate_skipped++; return; }
+        seenLinks.add(url);
+        const domainCount = perDomain.get(host) ?? 0;
+        if (domainCount >= 8 || linkQueueWrites.length >= 15) { summary.queued_existing_skipped++; return; }
+        perDomain.set(host, domainCount + 1);
         linkQueueWrites.push(queueDiscoverySource(db, { target_type: text.includes('cte') ? 'cte_page' : 'staff_directory', target_url: url, source_domain: host, school_id: item.school_id, district_id: item.district_id }));
       });
-      await Promise.all(linkQueueWrites);
+      const linkResults = await Promise.all(linkQueueWrites);
+      summary.queued_new += linkResults.filter(r=>r.action==='created').length;
+      summary.queued_existing_skipped += linkResults.filter(r=>r.action!=='created').length;
       const bodyText = $('body').text();
       const emails = Array.from(new Set<string>(bodyText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? []));
       for (const email of emails.slice(0, 20)) {
@@ -221,7 +235,9 @@ export async function runDiscoveryBatch(limit = 5) {
       await db.from('crawl_queue').update({ status: 'failed', last_error: message, updated_at: new Date().toISOString() }).eq('id', item.id);
     }
   }
-  await db.from('discovery_runs').update({ status: 'complete', completed_at: new Date().toISOString(), pages_checked: summary.processed, contacts_found: summary.inserted, rows_inserted: summary.inserted, rows_updated: summary.updated, rows_skipped: summary.skipped, errors: summary.errors }).eq('id', runId);
+  summary.queueCounts = await getQueueCounts(db);
+  summary.message = `Batch complete. Processed ${summary.processed} queued pages. Updated ${summary.updated} records. Pending queue: ${summary.queueCounts.pending}.`;
+  await db.from('discovery_runs').update({ status: 'complete', completed_at: new Date().toISOString(), pages_checked: summary.processed, contacts_found: summary.inserted, rows_inserted: summary.inserted + summary.queued_new, rows_updated: summary.updated, rows_skipped: summary.skipped + summary.queued_existing_skipped + summary.queued_duplicate_skipped, errors: summary.errors }).eq('id', runId);
   return summary;
 }
 
