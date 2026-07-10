@@ -27,8 +27,8 @@ export default function ImportSchoolsPage() {
     <main className="mx-auto max-w-4xl p-6">
       <h1 className="text-3xl font-bold text-slate-100">Import territory schools</h1>
       <p className="mt-3 text-slate-300">
-        Runs the protected Supabase seed importer against <code>data/territory-schools.csv</code>. Only approved admin
-        emails can access this page and API route.
+        Runs the protected Supabase seed importer against the embedded <code>data/territory-schools.ts</code> seed module,
+        so it works on Vercel without reading a CSV from the filesystem. Only approved admin emails can access this page and API route.
       </p>
       <button
         className="mt-6 rounded bg-sky-500 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
