@@ -5,6 +5,8 @@ import { createClientBrowser } from '@/lib/supabase';
 
 const APPROVED_ADMIN_EMAILS = new Set(['kenking@northrim.net', 'aking81@gmail.com']);
 const NOT_APPROVED_MESSAGE = 'This email is not approved for access.';
+const EXPIRED_LINK_MESSAGE =
+  'This sign-in link has expired or was already used. Please request a new one.';
 
 export default function Login() {
   const supabase = useMemo(() => createClientBrowser(), []);
@@ -19,20 +21,48 @@ export default function Login() {
     async function completeMagicLinkLogin() {
       setError('');
 
+      const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const authError = searchParams.get('error') ?? hashParams.get('error');
+      const authErrorCode = searchParams.get('error_code') ?? hashParams.get('error_code');
+      const authErrorDescription =
+        searchParams.get('error_description') ?? hashParams.get('error_description');
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
+      const authCode = searchParams.get('code');
+      const cleanLoginUrl = window.location.pathname;
 
-      if (accessToken && refreshToken) {
+      if (authError) {
+        window.history.replaceState(null, document.title, cleanLoginUrl);
+        if (active) {
+          setError(
+            authErrorCode === 'otp_expired'
+              ? EXPIRED_LINK_MESSAGE
+              : authErrorDescription ?? EXPIRED_LINK_MESSAGE,
+          );
+        }
+        return;
+      }
+
+      if (authCode) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
+
+        window.history.replaceState(null, document.title, cleanLoginUrl);
+
+        if (exchangeError) {
+          if (active) setError(EXPIRED_LINK_MESSAGE);
+          return;
+        }
+      } else if (accessToken && refreshToken) {
         const { error: setSessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         });
 
-        window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        window.history.replaceState(null, document.title, cleanLoginUrl);
 
         if (setSessionError) {
-          if (active) setError(setSessionError.message);
+          if (active) setError(EXPIRED_LINK_MESSAGE);
           return;
         }
       }
