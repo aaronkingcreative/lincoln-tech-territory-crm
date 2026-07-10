@@ -46,7 +46,10 @@ export default function Login() {
     setError('');
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        // Supabase must return magic-link hash tokens to the callback route, not /login or the site root.
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
 
     if (signInError) {
