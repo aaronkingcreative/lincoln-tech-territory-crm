@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ScrollableTable } from './ScrollableTable';
 
 export function DataTable({ rows }: { rows: Record<string, unknown>[] }) {
   const [query, setQuery] = useState('');
@@ -28,11 +29,11 @@ export function DataTable({ rows }: { rows: Record<string, unknown>[] }) {
         <select value={sort} onChange={(e) => setSort(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"><option value="">Original order</option>{cols.map((c) => <option key={c} value={c}>Sort by {c}</option>)}</select>
         <div className="ml-auto py-2 text-sm text-slate-400">Showing {filtered.length} of {rows.length}</div>
       </div>
-      <div className="overflow-auto rounded-xl border border-slate-800 bg-slate-900 shadow-xl shadow-slate-950/30">
+      <ScrollableTable className="rounded-xl border border-slate-800 bg-slate-900 shadow-xl shadow-slate-950/30">
         <table className="min-w-full text-sm text-slate-300"><thead className="sticky top-0 bg-slate-950/90 text-slate-100"><tr>{cols.map((c) => <th className="border-b border-slate-800 p-3 text-left font-semibold" key={c}>{c}</th>)}</tr></thead>
           <tbody>{filtered.map((r, i) => <tr className="transition odd:bg-slate-900 even:bg-slate-900/60 hover:bg-slate-800/70" key={String(r.id ?? i)}>{cols.map((c) => <td className="max-w-xs truncate border-b border-slate-800 p-3 align-top" key={c}>{String(r[c] ?? '')}</td>)}</tr>)}</tbody></table>
         {!filtered.length ? <div className="p-8 text-center text-slate-400">No rows match the current filters.</div> : null}
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

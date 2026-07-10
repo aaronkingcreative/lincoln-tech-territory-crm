@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 export const HELP_TEXT: Record<string, string> = {
   Dashboard: 'This is Ken’s Mission Control. Start here to see the current priority, progress gaps, follow-ups, and what to do next.',
@@ -26,4 +26,26 @@ export const HELP_TEXT: Record<string, string> = {
   'Follow-up Dates': 'Dates Ken should revisit a school or contact after a call, email, or visit.',
   'AI JSON Import': 'Paste JSON created from Ken/Aaron-provided notes. The importer validates, previews, and imports without inventing contacts.',
 };
-export default function HelpIcon({ topic }: { topic: string }) { const [open,setOpen]=useState(false); return <span className="relative inline-flex align-middle"><button type="button" onClick={()=>setOpen(!open)} className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/50 bg-slate-950 text-sm font-bold text-sky-200" aria-label={`Help: ${topic}`}>?</button>{open?<span className="absolute right-0 top-10 z-50 w-72 rounded-xl border border-slate-700 bg-slate-950 p-3 text-left text-sm font-normal text-slate-200 shadow-2xl"><b className="block text-sky-200">{topic}</b>{HELP_TEXT[topic] ?? 'Plain-English help for this part of the CRM.'}</span>:null}</span> }
+export default function HelpIcon({ topic }: { topic: string }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+  return <span className="relative inline-flex align-middle">
+    <button type="button" onClick={() => setOpen(!open)} className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/50 bg-slate-950 text-sm font-bold text-sky-200" aria-label={`Help: ${topic}`} aria-expanded={open} aria-controls={id}>?</button>
+    {open ? <>
+      <button type="button" aria-label="Close help" className="fixed inset-0 z-40 cursor-default bg-slate-950/60 sm:hidden" onClick={() => setOpen(false)} />
+      <span id={id} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="fixed inset-x-3 bottom-3 z-50 max-h-[min(80vh,34rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-sm font-normal text-slate-200 shadow-2xl sm:absolute sm:inset-auto sm:right-0 sm:top-10 sm:max-h-[70vh] sm:w-80 sm:max-w-[calc(100vw-2rem)] sm:p-3">
+        <span className="flex items-start justify-between gap-3">
+          <b id={`${id}-title`} className="block text-base text-sky-200 sm:text-sm">{topic}</b>
+          <button type="button" onClick={() => setOpen(false)} className="-mr-1 -mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-lg text-slate-100 sm:min-h-9 sm:min-w-9" aria-label="Close help">×</button>
+        </span>
+        <span className="mt-2 block leading-6">{HELP_TEXT[topic] ?? 'Plain-English help for this part of the CRM.'}</span>
+      </span>
+    </> : null}
+  </span>;
+}
