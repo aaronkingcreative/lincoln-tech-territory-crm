@@ -25,6 +25,13 @@ type Db = ReturnType<typeof createServiceClient>;
 
 type QueueCounts = Record<(typeof STATUS_VALUES)[number], number> & { byType: Record<string, number> };
 
+type DuplicateQueueTarget = {
+  target_url: string;
+  target_type: string;
+  count: number;
+  statuses: Record<string, number>;
+};
+
 type BatchSummary = {
   runId?: string;
   processed: number;
@@ -140,13 +147,15 @@ async function getQueueCounts(db: Db): Promise<QueueCounts> {
 async function getQueueDuplicates(db: Db) {
   const { data, error } = await db.from('crawl_queue').select('target_url,target_type,status').limit(50000);
   if (error) throw error;
-  const seen = new Map<string, { target_url: string; target_type: string; count: number; statuses: Record<string, number> }>();
+  const seen = new Map<string, DuplicateQueueTarget>();
   for (const row of data ?? []) {
-    const normalized = (() => { try { return normalizeTargetUrl(row.target_url); } catch { return row.target_url; } })();
-    const key = `${row.target_type}|${normalized}`;
-    const current = seen.get(key) ?? { target_url: normalized, target_type: row.target_type, count: 0, statuses: {} };
+    const normalized = (() => { try { return normalizeTargetUrl(String(row.target_url ?? '')); } catch { return String(row.target_url ?? ''); } })();
+    const targetType = String(row.target_type ?? 'unknown');
+    const status = String(row.status ?? 'unknown');
+    const key = `${targetType}|${normalized}`;
+    const current: DuplicateQueueTarget = seen.get(key) ?? { target_url: normalized, target_type: targetType, count: 0, statuses: {} };
     current.count += 1;
-    current.statuses[row.status] = (current.statuses[row.status] ?? 0) + 1;
+    current.statuses[status] = (current.statuses[status] ?? 0) + 1;
     seen.set(key, current);
   }
   return [...seen.values()].filter((row) => row.count > 1).sort((a, b) => b.count - a.count).slice(0, 20);
