@@ -1,43 +1,120 @@
 # Lincoln Tech Territory CRM
 
-Private Next.js/Supabase CRM for Ken King's Lincoln Tech recruiting territory: Ontario, Oregon plus the Southern Idaho I-84, I-86, and I-15 corridor through Saint Anthony and south to the Utah border. Utah schools are intentionally excluded.
+Private Next.js/Supabase CRM for Ken King's Lincoln Tech recruiting territory. The stable production domain is:
+
+```text
+https://lincoln-tech-territory-crm.vercel.app
+```
 
 ## Access
 
 - Supabase Auth protected application with admin allow-list only: `kenking@northrim.net`, `aking81@gmail.com` by default.
 - Configure additional admins with the `ADMIN_EMAILS` environment variable as a comma-separated list.
+- Discovery and import API routes require a current Supabase session cookie or a Bearer token whose user email is in `ADMIN_EMAILS`.
+- The Supabase service role key is used only in server-side code.
 
-## Territory seed data
+## Territory
 
-The authoritative seed file is:
+Discovery targets Ontario High School / Ontario School District in Ontario, Oregon plus southern Idaho schools from Ontario east to Saint Anthony, then south through Idaho to the Utah border. The focus is the I-84, I-86, and I-15 corridor.
+
+Approved Idaho counties are Canyon, Payette, Washington, Gem, Elmore, Gooding, Jerome, Twin Falls, Cassia, Minidoka, Lincoln, Power, Bannock, Bingham, Bonneville, Jefferson, Madison, Fremont, Teton, and Clark. Utah schools are excluded. Other Oregon schools are excluded unless manually added.
+
+## Discovery system
+
+The primary workflow is the admin page:
+
+```text
+/admin/discover
+```
+
+It provides buttons to:
+
+1. Discover schools and districts.
+2. Discover school websites.
+3. Discover contacts.
+4. Run the next crawl batch.
+5. View crawl results/errors.
+
+The page displays current school, district, and contact counts; the last discovery run; crawl queue status; inserted/updated/skipped rows; and recent errors.
+
+### Sources used
+
+Discovery queues official or authoritative public sources first:
+
+- Idaho Department of Education public school pages.
+- Idaho Report Card / Idaho schools public pages.
+- NCES Common Core of Data school search.
+- Official district websites.
+- Official school websites.
+- Ontario School District official website.
+
+The crawler only imports contacts from official school or district pages. It does not import random third-party directory data and does not invent missing fields.
+
+### Batch crawling
+
+Vercel functions should not run one large crawl, so discovery is split across small API calls:
+
+```http
+POST /api/admin/discover/start-schools
+POST /api/admin/discover/start-websites
+POST /api/admin/discover/start-contacts
+POST /api/admin/discover/run-batch
+GET  /api/admin/discover/status
+```
+
+`start-*` routes seed `crawl_queue` records. `run-batch` processes a limited number of pending queue items per request, records `source_urls`, creates `crawl_results`, writes `crawl_errors`, and adds more official staff/contact/CTE pages when it finds relevant same-domain links. The admin can repeatedly click **Run next crawl batch** until the queue is complete.
+
+### Contact discovery rules
+
+The contact parser looks for official-page evidence of these role areas: principals, assistant principals, counselors, head counselors, college and career advisors, career center coordinators, CTE directors/coordinators, and instructors for automotive, welding, construction, diesel, manufacturing, engineering, robotics, machining, woodworking, industrial technology, shop, and trades.
+
+For each candidate it stores name when found, title, email, phone/extension when found, school/district IDs when known, program area, source URL, source page title, date verified, confidence score, and extraction notes. High confidence means official page + clear title + email. Medium means official page + clear title without email. Low means official page + possible but unclear role. If a contact type is not found, it remains `not_found_yet`; `does_not_exist` is not used unless a source explicitly confirms the program does not exist.
+
+## Database tables
+
+Apply `supabase/schema.sql` to create/update the data model. Discovery uses:
+
+- `discovery_runs`
+- `crawl_queue`
+- `crawl_results`
+- `crawl_errors`
+- `source_urls`
+- `verification_status`
+
+The queue stores `target_type`, `target_url`, `source_domain`, optional `school_id`/`district_id`, `status`, `attempts`, `last_error`, `created_at`, and `updated_at`.
+
+## Manual seed importer fallback
+
+The CSV importer remains as a secondary fallback. The authoritative seed file is:
 
 ```bash
 data/territory-schools.csv
 ```
 
-It replaces the starter `data/initial-schools.csv` workflow. The CSV includes public high schools, charter high schools, technical schools, CTE/career programs where known, and relevant alternative high schools in the requested territory counties, plus Ontario High School in Ontario, Oregon. Utah schools are intentionally excluded, and other Oregon schools should only be added manually when explicitly approved.
+The production route includes the CSV in the Vercel serverless bundle through `next.config.mjs` output file tracing, avoiding the prior `ENOENT` error. Approved admins can run it from:
 
-Seed rows include the fields that can be verified or queued for verification without hallucination:
+```text
+/admin/import-schools
+```
 
-- school and district name
-- county and state
-- grades served and school type where known
-- address/city/zip/phone/website/coordinates/NCES ID when available
-- at least one source URL
-- import and verification dates
-- verification status
+or by calling:
 
-Most rows currently use NCES Common Core of Data school-search URLs as the authoritative public source queued for review. Ontario High School uses the official Ontario High School site. Blank fields mean the value has not been verified yet and should not be guessed.
+```http
+POST /api/admin/import-schools
+```
 
-## Local seed/import workflow
+The importer returns before/after dashboard counts plus inserted, updated, skipped, missing-required-data, source URL, and schema-error details. It upserts districts, schools, and source URLs only. It never touches contacts, programs, or recruiting notes, and it preserves manually edited values by only replacing fields when the seed has a verified nonblank value.
 
-1. Install dependencies:
+## Local workflow
 
 ```bash
 npm install
+psql "$DATABASE_URL" -f supabase/schema.sql
+npm run seed:schools
+npm run build
 ```
 
-2. Configure Supabase service credentials in `.env.local` or the shell:
+Required environment variables:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=...
@@ -46,51 +123,11 @@ SUPABASE_SERVICE_ROLE_KEY=...
 ADMIN_EMAILS=kenking@northrim.net,aking81@gmail.com
 ```
 
-3. Ensure the database schema has been applied. The `schools` table includes `city` and `zip` columns used by the territory seed file:
+## Refreshing data later
 
-```bash
-psql "$DATABASE_URL" -f supabase/schema.sql
-```
-
-4. Run the school importer:
-
-```bash
-npm run seed:schools
-```
-
-The importer reads `data/territory-schools.csv`, matches existing districts by name/state, matches existing schools by name/state/county, inserts missing records, updates seed-managed school/district fields, avoids duplicate schools, writes `source_urls`, and leaves relationship data such as contacts, programs, and recruiting notes untouched.
-
-## Production import workflow
-
-The app exposes a protected admin-only endpoint:
-
-```http
-POST /api/admin/import-schools
-```
-
-Approved admins can run it from the deployed UI at:
-
-```text
-/admin/import-schools
-```
-
-The request must include a valid Supabase session cookie or Bearer token for an email in `ADMIN_EMAILS`. The endpoint returns a JSON summary with inserted, updated, skipped, missing-required-data, and source URL counts.
-
-For the stable production app, sign in at `https://lincoln-tech-territory-crm.vercel.app`, open `/admin/import-schools`, and click **Run school import**. Vercel must have these environment variables configured: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `ADMIN_EMAILS`.
-
-## Refreshing seed data later
-
-1. Use official or authoritative sources first: NCES Common Core of Data, Idaho Department of Education / Idaho Report Card, official district websites, official school websites, and Ontario School District/Ontario High School pages.
-2. Edit `data/territory-schools.csv` only with values supported by a source URL.
-3. Leave unknown values blank. Do not invent contacts, teachers, phone numbers, addresses, or coordinates.
-4. Keep `source_url` and `date_verified` populated for every school row.
-5. Re-run `npm run seed:schools` locally or use the protected production import page.
-6. Confirm the dashboard count, Schools table, Districts table, Map markers for rows with coordinates, and XLSX export.
-
-## Data integrity rules
-
-- Do not create fake contacts.
-- Do not claim a shop teacher, counselor, or CTE contact exists unless found on an official source.
-- Missing contacts should be tracked as `not_found_yet` rather than fabricated.
-- Imported contacts must include an official `source_url` and `date_verified`.
-- Every seeded school must include a source URL and verification date.
+1. Prefer the `/admin/discover` workflow and official/authoritative sources.
+2. Run school discovery, website discovery, contact discovery, then small crawl batches.
+3. Review low-confidence contacts and missing contact queues before outreach.
+4. Use the CSV importer only as a fallback for known seed rows.
+5. Leave unknown values blank. Never hallucinate contacts, schools, teacher names, phone numbers, or emails.
+6. Confirm the dashboard counts, Schools table, Districts table, Contacts table, Map markers for rows with coordinates, and XLSX export after each refresh.

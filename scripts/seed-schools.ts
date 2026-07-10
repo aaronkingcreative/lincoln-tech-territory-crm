@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { createServiceClient } from '../lib/supabase';
@@ -98,8 +98,15 @@ async function findSchool(db: ReturnType<typeof createServiceClient>, row: CsvRo
 
 export async function importTerritorySchools(file = DEFAULT_FILE): Promise<ImportSummary> {
   const absoluteFile = resolve(file);
+  if (!existsSync(absoluteFile)) {
+    throw new Error(`Seed CSV not found at ${absoluteFile}. Ensure next.config.mjs outputFileTracingIncludes includes data/territory-schools.csv or run discovery instead.`);
+  }
   const rows = parseCsv(readFileSync(absoluteFile, 'utf8'));
   const db = createServiceClient();
+  const missingColumns = REQUIRED.filter((field) => !Object.prototype.hasOwnProperty.call(rows[0] ?? {}, field));
+  if (missingColumns.length) {
+    throw new Error(`Seed CSV schema error: missing required columns ${missingColumns.join(', ')}`);
+  }
   const summary: ImportSummary = {
     file,
     rows: rows.length,
