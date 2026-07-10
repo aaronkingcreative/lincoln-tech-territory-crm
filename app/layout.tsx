@@ -25,6 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link className="transition hover:text-sky-300" href="/map">
               Map
             </Link>
+            <Link className="transition hover:text-sky-300" href="/admin/import-schools">
+              Import
+            </Link>
             <a className="transition hover:text-sky-300" href="/api/export">
               Export XLSX
             </a>

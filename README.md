@@ -1,27 +1,43 @@
-# Lincoln Tech Idaho Territory Recruiting Manager
+# Lincoln Tech Territory CRM
 
 Private Next.js/Supabase CRM for Ken King's Lincoln Tech recruiting territory: Ontario, Oregon plus the Southern Idaho I-84, I-86, and I-15 corridor through Saint Anthony and south to the Utah border. Utah schools are intentionally excluded.
 
-## Features
+## Access
 
-- Supabase Auth protected application with admin allow-list only: `kenking@northrim.net`, `aking81@gmail.com`.
-- Supabase schema for districts, schools, contacts, programs, source URLs, crawl runs, verification status, and recruiting notes.
-- Dashboard totals and review queues for missing contacts, stale sources, broken websites, and low confidence matches.
-- School, district, and contact tables.
-- Leaflet school map with school popups.
-- XLSX export endpoint and script.
-- Starter data acquisition scripts using official source URLs only.
-- Cheerio crawler scaffolding that logs candidates and refuses to invent contact records.
+- Supabase Auth protected application with admin allow-list only: `kenking@northrim.net`, `aking81@gmail.com` by default.
+- Configure additional admins with the `ADMIN_EMAILS` environment variable as a comma-separated list.
 
-## Setup
+## Territory seed data
 
-1. Copy environment variables:
+The authoritative seed file is:
 
 ```bash
-cp .env.example .env.local
+data/territory-schools.csv
 ```
 
-2. Fill in Supabase values in `.env.local`:
+It replaces the starter `data/initial-schools.csv` workflow. The CSV includes public high schools, charter high schools, technical schools, CTE/career programs where known, and relevant alternative high schools in the requested territory counties, plus Ontario High School in Ontario, Oregon. Utah schools are intentionally excluded, and other Oregon schools should only be added manually when explicitly approved.
+
+Seed rows include the fields that can be verified or queued for verification without hallucination:
+
+- school and district name
+- county and state
+- grades served and school type where known
+- address/city/zip/phone/website/coordinates/NCES ID when available
+- at least one source URL
+- import and verification dates
+- verification status
+
+Most rows currently use NCES Common Core of Data school-search URLs as the authoritative public source queued for review. Ontario High School uses the official Ontario High School site. Blank fields mean the value has not been verified yet and should not be guessed.
+
+## Local seed/import workflow
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Configure Supabase service credentials in `.env.local` or the shell:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=...
@@ -30,45 +46,51 @@ SUPABASE_SERVICE_ROLE_KEY=...
 ADMIN_EMAILS=kenking@northrim.net,aking81@gmail.com
 ```
 
-3. Create the database objects in Supabase SQL editor using `supabase/schema.sql`.
-
-4. Install and run locally:
+3. Ensure the database schema has been applied. The `schools` table includes `city` and `zip` columns used by the territory seed file:
 
 ```bash
-npm install
-npm run dev
+psql "$DATABASE_URL" -f supabase/schema.sql
 ```
 
-## Data integrity rules
-
-- Never hallucinate contacts.
-- Leave unknown fields blank.
-- Mark unfound shop/CTE roles as `not_found_yet`, not `does_not_exist`.
-- Do not overwrite user-entered recruiting notes during refreshes.
-- Imported contacts must include an official `source_url` and `date_verified`.
-- Do not use unofficial sources unless a human manually approves them.
-
-## Territory rules
-
-- Include Ontario High School / Ontario School District in Malheur County, Oregon.
-- Do not include other Oregon schools unless manually added later.
-- Do not include Utah schools.
-- Initial Idaho counties: Canyon, Payette, Washington, Gem, Elmore, Gooding, Jerome, Twin Falls, Cassia, Minidoka, Lincoln, Power, Bannock, Bingham, Bonneville, Jefferson, Madison, Fremont, Teton, and Clark.
-
-## Scripts
+4. Run the school importer:
 
 ```bash
 npm run seed:schools
-npm run crawl:schools
-npm run crawl:contacts
-npm run export:xlsx
 ```
 
-`seed:schools` currently seeds a verified starter CSV and is structured for NCES / Idaho Report Card CSV expansion. `crawl:schools` stores official source metadata. `crawl:contacts` searches official pages for target role keywords and queues review candidates without creating hallucinated contacts.
+The importer reads `data/territory-schools.csv`, matches existing districts by name/state, matches existing schools by name/state/county, inserts missing records, updates seed-managed school/district fields, avoids duplicate schools, writes `source_urls`, and leaves relationship data such as contacts, programs, and recruiting notes untouched.
 
-## Future phases
+## Production import workflow
 
-1. Expand importer with NCES Common Core of Data and Idaho Department of Education / Idaho Report Card exports.
-2. Deepen crawler discovery for staff directory, counseling, CTE, pathway, and course catalog pages.
-3. Add explicit review queue pages and contact approval workflow.
-4. Add route-planning exports and refresh scheduling.
+The app exposes a protected admin-only endpoint:
+
+```http
+POST /api/admin/import-schools
+```
+
+Approved admins can run it from the deployed UI at:
+
+```text
+/admin/import-schools
+```
+
+The request must include a valid Supabase session cookie or Bearer token for an email in `ADMIN_EMAILS`. The endpoint returns a JSON summary with inserted, updated, skipped, missing-required-data, and source URL counts.
+
+For the stable production app, sign in at `https://lincoln-tech-territory-crm.vercel.app`, open `/admin/import-schools`, and click **Run school import**. Vercel must have these environment variables configured: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `ADMIN_EMAILS`.
+
+## Refreshing seed data later
+
+1. Use official or authoritative sources first: NCES Common Core of Data, Idaho Department of Education / Idaho Report Card, official district websites, official school websites, and Ontario School District/Ontario High School pages.
+2. Edit `data/territory-schools.csv` only with values supported by a source URL.
+3. Leave unknown values blank. Do not invent contacts, teachers, phone numbers, addresses, or coordinates.
+4. Keep `source_url` and `date_verified` populated for every school row.
+5. Re-run `npm run seed:schools` locally or use the protected production import page.
+6. Confirm the dashboard count, Schools table, Districts table, Map markers for rows with coordinates, and XLSX export.
+
+## Data integrity rules
+
+- Do not create fake contacts.
+- Do not claim a shop teacher, counselor, or CTE contact exists unless found on an official source.
+- Missing contacts should be tracked as `not_found_yet` rather than fabricated.
+- Imported contacts must include an official `source_url` and `date_verified`.
+- Every seeded school must include a source URL and verification date.
