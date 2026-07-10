@@ -26,6 +26,21 @@ alter table schools add column if not exists county text;
 alter table schools add column if not exists state text;
 alter table schools add column if not exists grades_served text;
 alter table schools add column if not exists school_type text;
+update schools set school_type = case
+  when lower(coalesce(school_type,'')) like '%charter%' and lower(coalesce(school_type,'')) like '%career%' then 'cte_career'
+  when lower(coalesce(school_type,'')) like '%technical%' or lower(coalesce(school_type,'')) like '%career%' then 'cte_career'
+  when lower(coalesce(school_type,'')) like '%charter%' then 'charter'
+  when lower(coalesce(school_type,'')) like '%alternative%' then 'alternative'
+  when lower(coalesce(school_type,'')) like '%private%' then 'private'
+  when school_type is null or school_type = '' then 'unknown'
+  else 'public'
+end;
+alter table schools drop constraint if exists schools_school_type_check;
+alter table schools add constraint schools_school_type_check check (school_type in ('public','charter','alternative','private','cte_career','unknown'));
+alter table schools add column if not exists school_tags jsonb default '[]';
+alter table schools add column if not exists territory_status text default 'included';
+alter table schools drop constraint if exists schools_territory_status_check;
+alter table schools add constraint schools_territory_status_check check (territory_status in ('included','candidate','excluded','inactive'));
 alter table schools add column if not exists address text;
 alter table schools add column if not exists city text;
 alter table schools add column if not exists zip text;

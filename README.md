@@ -17,7 +17,7 @@ https://lincoln-tech-territory-crm.vercel.app
 
 Discovery targets Ontario High School / Ontario School District in Ontario, Oregon plus southern Idaho schools from Ontario east to Saint Anthony, then south through Idaho to the Utah border. The focus is the I-84, I-86, and I-15 corridor.
 
-Approved Idaho counties are Ada, Canyon, Payette, Washington, Gem, Elmore, Gooding, Jerome, Twin Falls, Cassia, Minidoka, Lincoln, Power, Bannock, Bingham, Bonneville, Jefferson, Madison, Fremont, Teton, and Clark. Utah schools are excluded. Other Oregon schools are excluded unless manually added. Ada County is included because Boise is in Ken King's approved Lincoln Tech recruiting boundary; Ada seed rows cover public high schools, charter/alternative high schools, online public high schools, and career/technical programs where represented in official/authoritative public data.
+Approved Idaho counties are Ada, Canyon, Payette, Washington, Gem, Elmore, Gooding, Jerome, Twin Falls, Cassia, Minidoka, Lincoln, Power, Bannock, Bingham, Bonneville, Jefferson, Madison, Fremont, Teton, and Clark. Utah schools are excluded. Other Oregon schools are excluded unless manually added. Ada County is included because Boise is in Ken King's approved Lincoln Tech recruiting boundary; Ada seed rows cover public high schools, charter/alternative high schools, private high schools, and career/technical programs where represented in official/authoritative public data. Online/virtual schools are intentionally excluded from the active baseline at this time.
 
 ### Territory review
 
@@ -113,7 +113,7 @@ or by calling:
 POST /api/admin/import-schools
 ```
 
-The importer returns before/after dashboard counts plus inserted, updated, skipped, missing-required-data, source URL, and schema-error details. It upserts districts, schools, and source URLs only. It never touches contacts, programs, or recruiting notes, and it preserves manually edited values by only replacing fields when the seed has a verified nonblank value.
+The importer returns before/after dashboard counts plus inserted, updated, skipped, missing-required-data, source URL, and schema-error details. It upserts districts, schools, school_type, territory_status, and source URLs only. It never touches contacts, programs, call logs, school notes, or recruiting notes, and it preserves manually edited values by only replacing fields when the seed has a verified nonblank value.
 
 ## Local workflow
 

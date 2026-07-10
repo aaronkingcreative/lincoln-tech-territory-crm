@@ -7,7 +7,7 @@ export type TerritoryReviewCounty = {
 };
 
 export const TERRITORY_REVIEW_COUNTIES: TerritoryReviewCounty[] = [
-  { county: 'Ada', why: 'Boise is inside the approved Lincoln Tech recruiting boundary, so Ada County is now part of the active baseline.', status: 'included', knownExpectedHighSchools: 29, note: 'Included now; seeded from public high school, charter, alternative, online, and CTE/career rows with NCES source links for verification.' },
+  { county: 'Ada', why: 'Boise is inside the approved Lincoln Tech recruiting boundary, so Ada County is now part of the active baseline.', status: 'included', knownExpectedHighSchools: 31, note: 'Included now; seeded from public high school, charter, alternative, private, and CTE/career rows with official/authoritative source links for verification.' },
   { county: 'Owyhee', why: 'Borders Canyon and Ada counties and may be adjacent to Treasure Valley recruiting activity.', status: 'review', knownExpectedHighSchools: null, note: 'Do not import automatically; review boundary fit before adding.' },
   { county: 'Oneida', why: 'Southeast Idaho county near existing Bannock/Power corridor.', status: 'review', knownExpectedHighSchools: null, note: 'Do not import automatically; review boundary fit before adding.' },
   { county: 'Franklin', why: 'Southeast Idaho county near the Cache Valley edge of the possible route.', status: 'review', knownExpectedHighSchools: null, note: 'Do not import automatically; review boundary fit before adding.' },
