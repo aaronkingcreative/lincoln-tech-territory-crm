@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/admin-auth';
+import { createServiceClient } from '@/lib/supabase';
+export async function POST(req:NextRequest){const admin=await requireAdmin(req); if('error'in admin)return NextResponse.json({error:admin.error},{status:admin.status}); const f=await req.formData(); const id=String(f.get('id')??''); const title=String(f.get('title')??''); const status=String(f.get('status')??'not_started'); const db=createServiceClient(); if(id&&id.length>20) await db.from('recruiting_tasks').update({status,completed_at:status==='complete'?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq('id',id); else if(title) await db.from('recruiting_tasks').insert({title,status,priority:String(f.get('priority')??'medium'),task_scope:String(f.get('task_scope')??'global'),created_by_email:admin.email}); return NextResponse.redirect(new URL('/',req.url));}

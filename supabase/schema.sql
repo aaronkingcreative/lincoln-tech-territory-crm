@@ -90,3 +90,39 @@ create table if not exists recruiting_notes (id uuid primary key default gen_ran
 create table if not exists contact_logs (id uuid primary key default gen_random_uuid(), school_id uuid references schools(id) on delete cascade, contact_id uuid references contacts(id) on delete set null, district_id uuid references districts(id) on delete set null, contacted_by_email text, contact_method text not null check (contact_method in ('phone','email','in_person','other')), outcome text not null check (outcome in ('no_answer','left_message','reached_contact','scheduled_visit','needs_follow_up','not_interested','other')), notes text, contacted_at timestamptz not null default now(), created_at timestamptz default now(), updated_at timestamptz default now());
 
 alter table districts enable row level security; alter table schools enable row level security; alter table contacts enable row level security; alter table programs enable row level security; alter table source_urls enable row level security; alter table discovery_runs enable row level security; alter table crawl_runs enable row level security; alter table crawl_queue enable row level security; alter table crawl_results enable row level security; alter table crawl_errors enable row level security; alter table recruiting_notes enable row level security; alter table contact_logs enable row level security;
+
+create table if not exists dashboard_objectives (id uuid primary key default gen_random_uuid(), title text not null, description text, objective_type text, status text not null default 'archived' check (status in ('active','completed','archived')), progress_current int default 0, progress_target int default 1, recommended_next_action text, sort_order int default 0, completed_at timestamptz, created_by_email text, created_at timestamptz default now(), updated_at timestamptz default now());
+create table if not exists recruiting_tasks (id uuid primary key default gen_random_uuid(), title text not null, description text, task_scope text not null default 'global' check (task_scope in ('global','district','school','contact')), school_id uuid references schools(id) on delete cascade, district_id uuid references districts(id) on delete cascade, contact_id uuid references contacts(id) on delete cascade, status text not null default 'not_started' check (status in ('not_started','in_progress','blocked','complete')), priority text not null default 'medium' check (priority in ('high','medium','low')), due_date date, completed_at timestamptz, created_by_email text, notes text, created_at timestamptz default now(), updated_at timestamptz default now());
+create table if not exists json_imports (id uuid primary key default gen_random_uuid(), imported_by_email text, import_type text, raw_json jsonb, summary jsonb, status text not null default 'validated' check (status in ('validated','imported','failed')), created_at timestamptz default now());
+
+alter table schools add column if not exists geocoded_at timestamptz;
+alter table schools add column if not exists geocoding_source text;
+alter table schools add column if not exists location_accuracy text check (location_accuracy in ('address_level','city_level','missing')) default 'missing';
+alter table schools add column if not exists enrollment int;
+alter table schools add column if not exists mascot text;
+alter table schools add column if not exists graduation_date date;
+alter table schools add column if not exists bell_schedule_url text;
+alter table schools add column if not exists fafsa_or_career_event_notes text;
+alter table schools add column if not exists best_time_to_visit_seniors text;
+alter table schools add column if not exists special_programs text;
+alter table schools add column if not exists program_notes text;
+alter table contacts add column if not exists source_notes text;
+alter table contacts add column if not exists imported_by_email text;
+alter table contacts add column if not exists imported_at timestamptz;
+alter table recruiting_notes add column if not exists source text;
+alter table recruiting_tasks enable row level security; alter table dashboard_objectives enable row level security; alter table json_imports enable row level security;
+
+insert into dashboard_objectives (title,description,objective_type,status,progress_current,progress_target,recommended_next_action,sort_order)
+select * from (values
+('Confirm baseline territory roster','Make sure expected districts and schools are in the CRM.','coverage','active',0,1,'Review Districts & Schools, then mark baseline roster confirmed.',1),
+('Find phone and website for every school','Fill phone and website gaps so every school can be contacted.','data','archived',0,1,'Review missing phone and website lists.',2),
+('Find principal/contact office for every school','Find a main administrative contact path for each school.','contacts','archived',0,1,'Find principal or school office contact paths.',3),
+('Find counselor or college/career contact','Find counseling or college/career contacts for outreach.','contacts','archived',0,1,'Ask each school for counseling or career contact.',4),
+('Find CTE/shop/trades contact','Find instructors or coordinators tied to trades programs.','contacts','archived',0,1,'Ask for automotive, welding, diesel, construction, or CTE contacts.',5),
+('Make first outreach to every school','Call or email each school at least once.','outreach','archived',0,1,'Start with schools ready for outreach.',6),
+('Schedule first school visits','Turn warm outreach into visit dates.','visits','archived',0,1,'Schedule visits with warm or active schools.',7),
+('Complete follow-up notes for every contacted school','Log outcomes and next steps after outreach.','followup','archived',0,1,'Close stale follow-ups and update notes.',8)
+) as v(title,description,objective_type,status,progress_current,progress_target,recommended_next_action,sort_order)
+where not exists (select 1 from dashboard_objectives);
+alter table contacts drop constraint if exists contacts_confidence_score_check;
+alter table contacts add constraint contacts_confidence_score_check check (confidence_score in ('high','medium','low','manual_low'));
