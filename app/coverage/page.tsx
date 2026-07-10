@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import CoverageClient from './CoverageClient';
+import CoverageClient from '@/components/CoverageClient';
 import { buildCoverage, getTerritoryData, schoolFlags } from '@/lib/coverage';
 
 function Stat({label,value}:{label:string;value:unknown}){return <div className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="text-2xl font-bold">{String(value)}</div><div className="text-slate-400">{label}</div></div>}

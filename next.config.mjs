@@ -1,7 +1,3 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  outputFileTracingIncludes: {
-    '/api/admin/import-schools': ['./data/territory-schools.csv'],
-  },
-};
+const nextConfig = {};
 export default nextConfig;
