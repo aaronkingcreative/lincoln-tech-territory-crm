@@ -142,3 +142,21 @@ select * from (values
 where not exists (select 1 from dashboard_objectives);
 alter table contacts drop constraint if exists contacts_confidence_score_check;
 alter table contacts add constraint contacts_confidence_score_check check (confidence_score in ('high','medium','low','manual_low'));
+
+-- Crawl queue duplicate visibility. This does not delete queue rows; use Discover status cleanupSql after review.
+create index if not exists crawl_queue_target_type_url_idx on crawl_queue(target_type, target_url);
+create or replace view crawl_queue_duplicate_targets as
+select target_type,
+       lower(regexp_replace(target_url, '/+$', '')) as normalized_target_url,
+       sum(status_count) as duplicate_count,
+       jsonb_object_agg(status, status_count) as statuses
+from (
+  select target_type,
+         lower(regexp_replace(target_url, '/+$', '')) as target_url,
+         status,
+         count(*) as status_count
+  from crawl_queue
+  group by target_type, lower(regexp_replace(target_url, '/+$', '')), status
+) grouped
+group by target_type, target_url
+having sum(status_count) > 1;

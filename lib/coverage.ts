@@ -7,6 +7,7 @@ const has = (v: unknown) => String(v ?? '').trim().length > 0;
 const role = (c: DbRow, words: string[]) => words.some((w) => norm(`${c.title} ${c.program_area} ${c.extraction_notes}`).includes(norm(w)));
 const schoolKey = (name: unknown, county: unknown, state: unknown) => `${norm(name)}|${norm(county)}|${norm(state)}`;
 const districtKey = (name: unknown, county: unknown, state: unknown) => `${norm(name)}|${norm(county)}|${norm(state)}`;
+const urlKey = (value: unknown) => { try { const url = new URL(String(value ?? '')); url.hash = ''; url.hostname = url.hostname.toLowerCase().replace(/^www\./, ''); url.pathname = url.pathname.replace(/\/+$|\/index\.(html?|php)$/i, '') || '/'; return url.toString(); } catch { return String(value ?? '').trim(); } };
 
 export function expectedDistricts() {
   const map = new Map<string, { district: string; county: string; state: string; expectedSchools: typeof TERRITORY_SCHOOL_SEEDS }>();
@@ -48,10 +49,10 @@ function buildSchoolMatcher(schools: DbRow[]) {
   const byNces = new Map<string, DbRow>();
   for (const s of schools) {
     byKey.set(schoolKey(s.name, s.county, s.state), s);
-    if (s.source_url) bySource.set(String(s.source_url).trim(), s);
+    if (s.source_url) bySource.set(urlKey(s.source_url), s);
     if (s.nces_id) byNces.set(String(s.nces_id).trim(), s);
   }
-  return (e: (typeof TERRITORY_SCHOOL_SEEDS)[number]) => byNces.get(e.nces_id) || bySource.get(e.source_url) || byKey.get(schoolKey(e.school_name, e.county, e.state)) || schools.find((s) => norm(s.name) === norm(e.school_name) && norm(s.county) === norm(e.county) && norm(s.state || e.state) === norm(e.state)) || schools.find((s) => norm(s.name).includes(norm(e.school_name)) && norm(s.county) === norm(e.county));
+  return (e: (typeof TERRITORY_SCHOOL_SEEDS)[number]) => byNces.get(e.nces_id) || bySource.get(urlKey(e.source_url)) || byKey.get(schoolKey(e.school_name, e.county, e.state)) || schools.find((s) => norm(s.name) === norm(e.school_name) && norm(s.county) === norm(e.county) && norm(s.state || e.state) === norm(e.state)) || schools.find((s) => norm(s.name).includes(norm(e.school_name)) && norm(s.county) === norm(e.county));
 }
 
 export function buildCoverage(schools: DbRow[], contacts: DbRow[]) {
