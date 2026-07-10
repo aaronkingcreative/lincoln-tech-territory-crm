@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import HelpIcon from '@/components/HelpIcon';
 
 export default function ImportSchoolsPage() {
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
@@ -25,7 +26,7 @@ export default function ImportSchoolsPage() {
 
   return (
     <main className="mx-auto max-w-4xl p-6">
-      <h1 className="text-3xl font-bold text-slate-100">Import territory schools</h1>
+      <h1 className="text-3xl font-bold text-slate-100">Import territory schools <HelpIcon topic="Import Territory Schools"/></h1>
       <p className="mt-3 text-slate-300">
         Runs the protected Supabase seed importer against the embedded <code>data/territory-schools.ts</code> seed module,
         so it works on Vercel without reading a CSV from the filesystem. Only approved admin emails can access this page and API route.
