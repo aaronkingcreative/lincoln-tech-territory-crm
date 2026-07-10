@@ -33,10 +33,13 @@ export default function HelpIcon({ topic }: { topic: string }) {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
     const previousOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
       window.removeEventListener('keydown', onKey);
     };
   }, [open]);
@@ -44,7 +47,7 @@ export default function HelpIcon({ topic }: { topic: string }) {
     <button type="button" onClick={() => setOpen(!open)} className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/50 bg-slate-950 text-sm font-bold text-sky-200" aria-label={`Help: ${topic}`} aria-expanded={open} aria-controls={id}>?</button>
     {open ? <>
       <button type="button" aria-label="Close help" className="fixed inset-0 z-40 cursor-default bg-slate-950/60 sm:hidden" onClick={() => setOpen(false)} />
-      <span id={id} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="fixed inset-x-3 top-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] text-left text-sm font-normal text-slate-200 shadow-2xl sm:absolute sm:inset-auto sm:right-0 sm:top-10 sm:max-h-[70vh] sm:w-80 sm:max-w-[calc(100vw-2rem)] sm:p-3">
+      <span id={id} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="fixed inset-x-4 top-1/2 z-50 max-h-[min(80dvh,640px)] -translate-y-1/2 overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-left text-sm font-normal text-slate-200 shadow-2xl sm:absolute sm:inset-auto sm:right-0 sm:top-10 sm:max-h-[70vh] sm:w-80 sm:max-w-[calc(100vw-2rem)] sm:translate-y-0 sm:p-3">
         <span className="flex items-start justify-between gap-3">
           <b id={`${id}-title`} className="block text-base text-sky-200 sm:text-sm">{topic}</b>
           <button type="button" onClick={() => setOpen(false)} className="-mr-1 -mt-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-lg text-slate-100 sm:min-h-9 sm:min-w-9" aria-label="Close help">×</button>

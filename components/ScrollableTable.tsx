@@ -13,7 +13,7 @@ export function ScrollableTable({ children, className = '' }: { children: ReactN
         <span>{scrolled ? 'More columns available' : 'Swipe left to see more'}</span><span aria-hidden="true" className="text-lg leading-none">→</span>
       </div>
     </div>
-    <div className="pointer-events-none absolute bottom-0 right-0 top-8 z-[1] w-12 bg-gradient-to-l from-slate-950/90 to-transparent sm:hidden" />
+    {!scrolled ? <div className="pointer-events-none absolute bottom-0 right-0 top-12 z-[1] w-10 bg-gradient-to-l from-slate-950/80 to-transparent sm:hidden" /> : null}
     <div onScroll={onScroll} className="overflow-x-auto">{children}</div>
   </div>;
 }

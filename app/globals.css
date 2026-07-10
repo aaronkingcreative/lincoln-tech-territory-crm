@@ -8,6 +8,23 @@
 
 * {
   border-color: theme('colors.slate.800');
+  box-sizing: border-box;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 640px) {
+  body {
+    padding-bottom: 0;
+  }
 }
 
 a {
@@ -15,7 +32,8 @@ a {
 }
 
 .leaflet-container {
-  height: 70vh;
+  min-height: 420px;
+  height: 100%;
   width: 100%;
   border: 1px solid theme('colors.slate.800');
   border-radius: 1rem;
