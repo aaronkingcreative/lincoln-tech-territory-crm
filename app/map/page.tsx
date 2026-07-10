@@ -2,7 +2,6 @@
 
 import 'leaflet/dist/leaflet.css';
 
-import L from 'leaflet';
 import { useEffect, useState } from 'react';
 
 type SchoolMapRow = {
@@ -20,28 +19,40 @@ export default function MapPage() {
   useEffect(() => {
     if (!el) return;
 
-    const map = L.map(el).setView([43.6, -113.2], 7);
+    let cancelled = false;
+    let map: import('leaflet').Map | null = null;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap',
-    }).addTo(map);
+    async function initializeMap() {
+      const L = await import('leaflet');
+      if (cancelled) return;
 
-    fetch('/api/schools-map')
-      .then((response) => response.json() as Promise<SchoolMapRow[]>)
-      .then((rows) =>
-        rows.forEach((school) => {
-          if (school.latitude == null || school.longitude == null) return;
+      map = L.map(el).setView([43.6, -113.2], 7);
 
-          L.marker([school.latitude, school.longitude])
-            .addTo(map)
-            .bindPopup(
-              `<b>${school.name}</b><br>${school.address ?? ''}<br>${school.phone ?? ''}<br>${school.verification_status ?? ''}`,
-            );
-        }),
-      );
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map);
+
+      const response = await fetch('/api/schools-map');
+      const rows = (await response.json()) as SchoolMapRow[];
+      if (cancelled || !map) return;
+      const activeMap = map;
+
+      rows.forEach((school) => {
+        if (school.latitude == null || school.longitude == null) return;
+
+        L.marker([school.latitude, school.longitude])
+          .addTo(activeMap)
+          .bindPopup(
+            `<b>${school.name}</b><br>${school.address ?? ''}<br>${school.phone ?? ''}<br>${school.verification_status ?? ''}`,
+          );
+      });
+    }
+
+    void initializeMap();
 
     return () => {
-      map.remove();
+      cancelled = true;
+      map?.remove();
     };
   }, [el]);
 
