@@ -9,11 +9,14 @@ type ImportSummary = {
   districts: { inserted: number; updated: number; skipped: number };
   schools: { inserted: number; updated: number; skipped: number; missingRequiredData: number };
   sourceUrls: { inserted: number; updated: number; skipped: number };
+  byCounty: Record<string, { schoolsInserted: number; schoolsUpdated: number; schoolsSkipped: number; districtsInserted: number; districtsUpdated: number; districtsSkipped: number }>;
   errors: string[];
 };
 
 const DEFAULT_FILE = 'embedded:data/territory-schools.ts';
 const REQUIRED = ['school_name', 'district_name', 'county', 'state', 'source_url'];
+const ALLOWED_SCHOOL_TYPES = new Set(['public', 'charter', 'alternative', 'private', 'cte_career', 'unknown']);
+const ALLOWED_TERRITORY_STATUSES = new Set(['included', 'candidate', 'excluded', 'inactive']);
 function parseCsv(text: string): CsvRow[] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -60,6 +63,11 @@ function blankToNull(value?: string) {
   return trimmed ? trimmed : null;
 }
 
+function enumOrDefault(value: string | undefined, allowed: Set<string>, fallback: string) {
+  const normalized = value?.trim().toLowerCase();
+  return normalized && allowed.has(normalized) ? normalized : fallback;
+}
+
 function numberOrNull(value?: string) {
   const trimmed = value?.trim();
   if (!trimmed) return null;
@@ -96,7 +104,7 @@ async function findSchool(db: ReturnType<typeof createServiceClient>, row: CsvRo
 
 export async function importTerritorySchools(file = DEFAULT_FILE): Promise<ImportSummary> {
   const rows: CsvRow[] = file === DEFAULT_FILE
-    ? TERRITORY_SCHOOL_SEEDS.map((row) => ({ ...row }))
+    ? TERRITORY_SCHOOL_SEEDS.map((row) => ({ ...row }) as CsvRow)
     : parseCsv(await import('node:fs/promises').then((fs) => fs.readFile(file, 'utf8')));
   const db = createServiceClient();
   const missingColumns = REQUIRED.filter((field) => !Object.prototype.hasOwnProperty.call(rows[0] ?? {}, field));
@@ -109,13 +117,21 @@ export async function importTerritorySchools(file = DEFAULT_FILE): Promise<Impor
     districts: { inserted: 0, updated: 0, skipped: 0 },
     schools: { inserted: 0, updated: 0, skipped: 0, missingRequiredData: 0 },
     sourceUrls: { inserted: 0, updated: 0, skipped: 0 },
+    byCounty: {},
     errors: [],
+  };
+
+  const countySummary = (county: string) => {
+    const key = county || 'Unknown';
+    summary.byCounty[key] ??= { schoolsInserted: 0, schoolsUpdated: 0, schoolsSkipped: 0, districtsInserted: 0, districtsUpdated: 0, districtsSkipped: 0 };
+    return summary.byCounty[key];
   };
 
   for (const [index, row] of rows.entries()) {
     const missing = REQUIRED.filter((field) => !row[field]);
     if (missing.length) {
       summary.schools.missingRequiredData += 1;
+      countySummary(row.county).schoolsSkipped += 1;
       summary.errors.push(`Row ${index + 2} missing required fields: ${missing.join(', ')}`);
       continue;
     }
@@ -134,6 +150,8 @@ export async function importTerritorySchools(file = DEFAULT_FILE): Promise<Impor
       summary.errors.push(`Row ${index + 2} district lookup failed: ${districtLookupError.message}`);
       summary.districts.skipped += 1;
       summary.schools.skipped += 1;
+      countySummary(row.county).districtsSkipped += 1;
+      countySummary(row.county).schoolsSkipped += 1;
       continue;
     }
 
@@ -148,12 +166,13 @@ export async function importTerritorySchools(file = DEFAULT_FILE): Promise<Impor
       summary.schools.skipped += 1;
       continue;
     }
-    existingDistrict?.id ? (summary.districts.updated += 1) : (summary.districts.inserted += 1);
+    if (existingDistrict?.id) { summary.districts.updated += 1; countySummary(row.county).districtsUpdated += 1; } else { summary.districts.inserted += 1; countySummary(row.county).districtsInserted += 1; }
 
     const { data: existingSchool, error: schoolLookupError } = await findSchool(db, row);
     if (schoolLookupError) {
       summary.errors.push(`Row ${index + 2} school lookup failed: ${schoolLookupError.message}`);
       summary.schools.skipped += 1;
+      countySummary(row.county).schoolsSkipped += 1;
       continue;
     }
 
@@ -163,7 +182,8 @@ export async function importTerritorySchools(file = DEFAULT_FILE): Promise<Impor
       county: row.county,
       state: row.state,
       grades_served: blankToNull(row.grades_served),
-      school_type: blankToNull(row.school_type),
+      school_type: enumOrDefault(row.school_type, ALLOWED_SCHOOL_TYPES, 'unknown'),
+      territory_status: enumOrDefault(row.territory_status, ALLOWED_TERRITORY_STATUSES, 'included'),
       address: blankToNull(row.address),
       city: blankToNull(row.city),
       zip: blankToNull(row.zip),
@@ -187,7 +207,7 @@ export async function importTerritorySchools(file = DEFAULT_FILE): Promise<Impor
       summary.schools.skipped += 1;
       continue;
     }
-    existingSchool?.id ? (summary.schools.updated += 1) : (summary.schools.inserted += 1);
+    if (existingSchool?.id) { summary.schools.updated += 1; countySummary(row.county).schoolsUpdated += 1; } else { summary.schools.inserted += 1; countySummary(row.county).schoolsInserted += 1; }
 
     const { data: existingSource } = await db.from('source_urls').select('id').eq('url', row.source_url).maybeSingle();
     const sourcePayload = {

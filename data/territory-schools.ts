@@ -1,10 +1,14 @@
+export type SchoolType = 'public' | 'charter' | 'alternative' | 'private' | 'cte_career' | 'unknown';
+export type TerritoryStatus = 'included' | 'candidate' | 'excluded' | 'inactive';
+
 export type TerritorySchoolSeedRow = {
   school_name: string;
   district_name: string;
   county: string;
   state: string;
   grades_served: string;
-  school_type: string;
+  school_type: SchoolType;
+  territory_status: TerritoryStatus;
   address: string;
   city: string;
   zip: string;
@@ -26,7 +30,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Malheur",
     "state": "OR",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "1115 W Idaho Ave",
     "city": "Ontario",
     "zip": "97914",
@@ -38,7 +42,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://ohs.ontario.k12.or.us/",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "verified"
+    "verification_status": "verified",
+    "territory_status": "included"
   },
   {
     "school_name": "Fruitland High School",
@@ -46,7 +51,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Payette",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Fruitland",
     "zip": "83619",
@@ -58,7 +63,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Fruitland+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Payette High School",
@@ -66,7 +72,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Payette",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Payette",
     "zip": "83661",
@@ -78,7 +84,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Payette+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Parma High School",
@@ -86,7 +93,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Parma",
     "zip": "83660",
@@ -98,7 +105,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Parma+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Notus Jr/Sr High School",
@@ -106,7 +114,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Notus",
     "zip": "83656",
@@ -118,7 +126,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Notus+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Wilder Jr/Sr High School",
@@ -126,7 +135,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Wilder",
     "zip": "83676",
@@ -138,7 +147,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Wilder+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Caldwell Senior High School",
@@ -146,7 +156,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Caldwell",
     "zip": "83605",
@@ -158,7 +168,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Caldwell+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Canyon Springs High School",
@@ -166,7 +177,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Caldwell",
     "zip": "83605",
@@ -178,7 +189,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Canyon+Springs+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Vallivue High School",
@@ -186,7 +198,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Caldwell",
     "zip": "83607",
@@ -198,7 +210,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Vallivue+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Ridgevue High School",
@@ -206,7 +219,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Nampa",
     "zip": "83687",
@@ -218,7 +231,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Ridgevue+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Nampa Senior High School",
@@ -226,7 +240,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Nampa",
     "zip": "83686",
@@ -238,7 +252,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Nampa+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Columbia High School",
@@ -246,7 +261,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Nampa",
     "zip": "83687",
@@ -258,7 +273,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Columbia+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Skyview High School",
@@ -266,7 +282,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Nampa",
     "zip": "83686",
@@ -278,7 +294,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Skyview+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Union High School",
@@ -286,7 +303,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Nampa",
     "zip": "83686",
@@ -298,7 +315,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Union+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Idaho Arts Charter School",
@@ -306,7 +324,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Nampa",
     "zip": "83687",
@@ -318,7 +336,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Idaho+Arts+Charter+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Liberty Charter School",
@@ -326,7 +345,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Nampa",
     "zip": "83686",
@@ -338,7 +357,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Liberty+Charter+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Vision Charter School",
@@ -346,7 +366,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Canyon",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Caldwell",
     "zip": "83605",
@@ -358,7 +378,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Vision+Charter+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Weiser High School",
@@ -366,7 +387,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Washington",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Weiser",
     "zip": "83672",
@@ -378,7 +399,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Weiser+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Cambridge Jr/Sr High School",
@@ -386,7 +408,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Washington",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Cambridge",
     "zip": "83610",
@@ -398,7 +420,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Cambridge+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Council Jr/Sr High School",
@@ -406,7 +429,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Washington",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Council",
     "zip": "83612",
@@ -418,7 +441,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Council+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Emmett High School",
@@ -426,7 +450,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Gem",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Emmett",
     "zip": "83617",
@@ -438,7 +462,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Emmett+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Black Canyon High School",
@@ -446,7 +471,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Gem",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Emmett",
     "zip": "83617",
@@ -458,7 +483,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Black+Canyon+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Mountain Home High School",
@@ -466,7 +492,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Elmore",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Mountain Home",
     "zip": "83647",
@@ -478,7 +504,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Mountain+Home+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Richard McKenna Charter High School",
@@ -486,7 +513,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Elmore",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Mountain Home",
     "zip": "83647",
@@ -498,7 +525,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Richard+McKenna+Charter+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Glenns Ferry High School",
@@ -506,7 +534,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Elmore",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Glenns Ferry",
     "zip": "83623",
@@ -518,7 +546,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Glenns+Ferry+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Gooding High School",
@@ -526,7 +555,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Gooding",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Gooding",
     "zip": "83330",
@@ -538,7 +567,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Gooding+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Wendell High School",
@@ -546,7 +576,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Gooding",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Wendell",
     "zip": "83355",
@@ -558,7 +588,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Wendell+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Hagerman Jr/Sr High School",
@@ -566,7 +597,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Gooding",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Hagerman",
     "zip": "83332",
@@ -578,7 +609,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Hagerman+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Jerome High School",
@@ -586,7 +618,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Jerome",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Jerome",
     "zip": "83338",
@@ -598,7 +630,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Jerome+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Canyon Ridge High School",
@@ -606,7 +639,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Twin Falls",
     "zip": "83301",
@@ -618,7 +651,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Canyon+Ridge+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Twin Falls High School",
@@ -626,7 +660,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Twin Falls",
     "zip": "83301",
@@ -638,7 +672,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Twin+Falls+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Magic Valley High School",
@@ -646,7 +681,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Twin Falls",
     "zip": "83301",
@@ -658,7 +693,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Magic+Valley+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Buhl High School",
@@ -666,7 +702,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Buhl",
     "zip": "83316",
@@ -678,7 +714,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Buhl+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Filer High School",
@@ -686,7 +723,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Filer",
     "zip": "83328",
@@ -698,7 +735,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Filer+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Kimberly High School",
@@ -706,7 +744,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Kimberly",
     "zip": "83341",
@@ -718,7 +756,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Kimberly+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Murtaugh High School",
@@ -726,7 +765,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Murtaugh",
     "zip": "83344",
@@ -738,7 +777,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Murtaugh+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Castleford High School",
@@ -746,7 +786,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Twin Falls",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Castleford",
     "zip": "83321",
@@ -758,7 +798,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Castleford+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Minico Senior High School",
@@ -766,7 +807,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Minidoka",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Rupert",
     "zip": "83350",
@@ -778,7 +819,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Minico+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Burley Senior High School",
@@ -786,7 +828,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Cassia",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Burley",
     "zip": "83318",
@@ -798,7 +840,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Burley+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Cassia Jr/Sr High School",
@@ -806,7 +849,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Cassia",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Burley",
     "zip": "83318",
@@ -818,7 +861,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Cassia+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Declo Senior High School",
@@ -826,7 +870,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Cassia",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Declo",
     "zip": "83323",
@@ -838,7 +882,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Declo+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Oakley Junior/Senior High School",
@@ -846,7 +891,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Cassia",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Oakley",
     "zip": "83346",
@@ -858,7 +903,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Oakley+Junior%2FSenior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Raft River Jr/Sr High School",
@@ -866,7 +912,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Cassia",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Malta",
     "zip": "83342",
@@ -878,7 +924,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Raft+River+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Shoshone High School",
@@ -886,7 +933,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Lincoln",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Shoshone",
     "zip": "83352",
@@ -898,7 +945,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Shoshone+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Dietrich School",
@@ -906,7 +954,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Lincoln",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Dietrich",
     "zip": "83324",
@@ -918,7 +966,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Dietrich+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "American Falls High School",
@@ -926,7 +975,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Power",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "American Falls",
     "zip": "83211",
@@ -938,7 +987,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=American+Falls+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Rockland Public School",
@@ -946,7 +996,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Power",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Rockland",
     "zip": "83271",
@@ -958,7 +1008,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Rockland+Public+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Highland High School",
@@ -966,7 +1017,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bannock",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Pocatello",
     "zip": "83201",
@@ -978,7 +1029,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Highland+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Pocatello High School",
@@ -986,7 +1038,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bannock",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Pocatello",
     "zip": "83204",
@@ -998,7 +1050,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Pocatello+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Century High School",
@@ -1006,7 +1059,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bannock",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Pocatello",
     "zip": "83204",
@@ -1018,7 +1071,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Century+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "New Horizon High School",
@@ -1026,7 +1080,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bannock",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Pocatello",
     "zip": "83201",
@@ -1038,7 +1092,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=New+Horizon+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Marsh Valley High School",
@@ -1046,7 +1101,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bannock",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Arimo",
     "zip": "83214",
@@ -1058,7 +1113,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Marsh+Valley+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Lava Hot Springs Elementary/High School",
@@ -1066,7 +1122,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bannock",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Lava Hot Springs",
     "zip": "83246",
@@ -1078,7 +1134,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Lava+Hot+Springs+Elementary%2FHigh+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Blackfoot High School",
@@ -1086,7 +1143,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bingham",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Blackfoot",
     "zip": "83221",
@@ -1098,7 +1155,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Blackfoot+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Independence Alternative High School",
@@ -1106,7 +1164,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bingham",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Blackfoot",
     "zip": "83221",
@@ -1118,7 +1176,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Independence+Alternative+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Snake River High School",
@@ -1126,7 +1185,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bingham",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Blackfoot",
     "zip": "83221",
@@ -1138,7 +1197,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Snake+River+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Firth High School",
@@ -1146,7 +1206,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bingham",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Firth",
     "zip": "83236",
@@ -1158,7 +1218,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Firth+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Shelley Senior High School",
@@ -1166,7 +1227,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bingham",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Shelley",
     "zip": "83274",
@@ -1178,7 +1239,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Shelley+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Idaho Falls Senior High School",
@@ -1186,7 +1248,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bonneville",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Idaho Falls",
     "zip": "83401",
@@ -1198,7 +1260,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Idaho+Falls+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Skyline Senior High School",
@@ -1206,7 +1269,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bonneville",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Idaho Falls",
     "zip": "83402",
@@ -1218,7 +1281,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Skyline+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Compass Academy",
@@ -1226,7 +1290,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bonneville",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Magnet high school",
+    "school_type": "public",
     "address": "",
     "city": "Idaho Falls",
     "zip": "83401",
@@ -1238,7 +1302,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Compass+Academy&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Bonneville High School",
@@ -1246,7 +1311,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bonneville",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Idaho Falls",
     "zip": "83401",
@@ -1258,7 +1323,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Bonneville+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Hillcrest High School",
@@ -1266,7 +1332,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bonneville",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Ammon",
     "zip": "83406",
@@ -1278,7 +1344,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Hillcrest+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Thunder Ridge High School",
@@ -1286,7 +1353,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bonneville",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Idaho Falls",
     "zip": "83401",
@@ -1298,7 +1365,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Thunder+Ridge+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Technical Careers High School",
@@ -1306,7 +1374,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Bonneville",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Technical high school",
+    "school_type": "cte_career",
     "address": "",
     "city": "Idaho Falls",
     "zip": "83401",
@@ -1318,7 +1386,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Technical+Careers+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Ririe High School",
@@ -1326,7 +1395,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Jefferson",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Ririe",
     "zip": "83443",
@@ -1338,7 +1407,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Ririe+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Rigby High School",
@@ -1346,7 +1416,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Jefferson",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Rigby",
     "zip": "83442",
@@ -1358,27 +1428,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Rigby+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
-  },
-  {
-    "school_name": "Rigby Online High School",
-    "district_name": "Jefferson County Joint School District",
-    "county": "Jefferson",
-    "state": "ID",
-    "grades_served": "9-12",
-    "school_type": "Online high school",
-    "address": "",
-    "city": "Rigby",
-    "zip": "83442",
-    "main_phone": "",
-    "website": "",
-    "latitude": "",
-    "longitude": "",
-    "nces_id": "",
-    "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Rigby+Online+High+School&State=16",
-    "date_imported": "2026-07-10",
-    "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Madison Senior High School",
@@ -1386,7 +1437,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Madison",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Rexburg",
     "zip": "83440",
@@ -1398,7 +1449,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Madison+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Central High School",
@@ -1406,7 +1458,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Madison",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Rexburg",
     "zip": "83440",
@@ -1418,7 +1470,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Central+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Sugar-Salem High School",
@@ -1426,7 +1479,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Madison",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Sugar City",
     "zip": "83448",
@@ -1438,7 +1491,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Sugar-Salem+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "South Fremont High School",
@@ -1446,7 +1500,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Fremont",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "St. Anthony",
     "zip": "83445",
@@ -1458,7 +1512,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=South+Fremont+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "North Fremont High School",
@@ -1466,7 +1521,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Fremont",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Ashton",
     "zip": "83420",
@@ -1478,7 +1533,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=North+Fremont+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Teton High School",
@@ -1486,7 +1542,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Teton",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Driggs",
     "zip": "83422",
@@ -1498,7 +1554,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Teton+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Clark County Jr/Sr High School",
@@ -1506,7 +1563,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Clark",
     "state": "ID",
     "grades_served": "7-12",
-    "school_type": "Public jr/sr high school",
+    "school_type": "public",
     "address": "",
     "city": "Dubois",
     "zip": "83423",
@@ -1518,7 +1575,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Clark+County+Jr%2FSr+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Boise Senior High School",
@@ -1526,7 +1584,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1538,7 +1596,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Boise+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Borah Senior High School",
@@ -1546,7 +1605,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1558,7 +1617,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Borah+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Capital Senior High School",
@@ -1566,7 +1626,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1578,7 +1638,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Capital+Senior+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Timberline High School",
@@ -1586,7 +1647,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1598,7 +1659,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Timberline+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Frank Church High School",
@@ -1606,7 +1668,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1618,7 +1680,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Frank+Church+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Dennis Technical Education Center",
@@ -1626,7 +1689,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Career/technical center",
+    "school_type": "cte_career",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1638,7 +1701,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Dennis+Technical+Education+Center&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Centennial High School",
@@ -1646,7 +1710,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1658,7 +1722,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Centennial+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Eagle High School",
@@ -1666,7 +1731,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Eagle",
     "zip": "",
@@ -1678,7 +1743,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Eagle+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Eagle Academy",
@@ -1686,7 +1752,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Eagle",
     "zip": "",
@@ -1698,7 +1764,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Eagle+Academy&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Meridian High School",
@@ -1706,7 +1773,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1718,7 +1785,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Meridian+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Mountain View High School",
@@ -1726,7 +1794,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1738,7 +1806,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Mountain+View+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Owyhee High School",
@@ -1746,7 +1815,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1758,7 +1827,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Owyhee+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Rocky Mountain High School",
@@ -1766,7 +1836,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1778,7 +1848,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Rocky+Mountain+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Renaissance High School",
@@ -1786,7 +1857,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1798,7 +1869,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Renaissance+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Meridian Academy",
@@ -1806,7 +1878,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1818,7 +1890,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Meridian+Academy&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Meridian Medical Arts Charter High School",
@@ -1826,7 +1899,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Career/technical charter high school",
+    "school_type": "cte_career",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1838,7 +1911,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Meridian+Medical+Arts+Charter+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Meridian Technical Charter High School",
@@ -1846,7 +1920,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Career/technical charter high school",
+    "school_type": "cte_career",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1858,7 +1932,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Meridian+Technical+Charter+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Rebound School of Opportunity",
@@ -1866,7 +1941,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1878,7 +1953,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Rebound+School+of+Opportunity&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Idaho Fine Arts Academy",
@@ -1886,7 +1962,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Magnet high school",
+    "school_type": "public",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1898,7 +1974,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Idaho+Fine+Arts+Academy&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Kuna High School",
@@ -1906,7 +1983,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public high school",
+    "school_type": "public",
     "address": "",
     "city": "Kuna",
     "zip": "",
@@ -1918,7 +1995,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Kuna+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Initial Point High School",
@@ -1926,7 +2004,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative high school",
+    "school_type": "alternative",
     "address": "",
     "city": "Kuna",
     "zip": "",
@@ -1938,7 +2016,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Initial+Point+High+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Compass Public Charter School",
@@ -1946,7 +2025,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Meridian",
     "zip": "",
@@ -1958,7 +2037,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Compass+Public+Charter+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "North Star Charter School",
@@ -1966,7 +2046,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Eagle",
     "zip": "",
@@ -1978,7 +2058,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=North+Star+Charter+School&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Sage International School of Boise",
@@ -1986,7 +2067,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Public charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -1998,7 +2079,8 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Sage+International+School+of+Boise&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
     "school_name": "Cardinal Academy",
@@ -2006,7 +2088,7 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Alternative charter high school",
+    "school_type": "charter",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -2018,55 +2100,16 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Cardinal+Academy&State=16",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
-    "school_name": "Idaho Technical Career Academy",
-    "district_name": "Idaho Technical Career Academy Inc.",
+    "school_name": "Bishop Kelly High School",
+    "district_name": "Bishop Kelly High School",
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Online career/technical high school",
-    "address": "",
-    "city": "Meridian",
-    "zip": "",
-    "main_phone": "",
-    "website": "",
-    "latitude": "",
-    "longitude": "",
-    "nces_id": "",
-    "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Idaho+Technical+Career+Academy&State=16",
-    "date_imported": "2026-07-10",
-    "date_verified": "2026-07-10",
-    "verification_status": "unverified"
-  },
-  {
-    "school_name": "Idaho College and Career Readiness Academy",
-    "district_name": "Idaho College and Career Readiness Academy Inc.",
-    "county": "Ada",
-    "state": "ID",
-    "grades_served": "9-12",
-    "school_type": "Online college/career high school",
-    "address": "",
-    "city": "Meridian",
-    "zip": "",
-    "main_phone": "",
-    "website": "",
-    "latitude": "",
-    "longitude": "",
-    "nces_id": "",
-    "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Idaho+College+and+Career+Readiness+Academy&State=16",
-    "date_imported": "2026-07-10",
-    "date_verified": "2026-07-10",
-    "verification_status": "unverified"
-  },
-  {
-    "school_name": "iSucceed Virtual High School",
-    "district_name": "iSucceed Virtual High School Inc.",
-    "county": "Ada",
-    "state": "ID",
-    "grades_served": "9-12",
-    "school_type": "Online public high school",
+    "school_type": "private",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -2075,18 +2118,19 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "latitude": "",
     "longitude": "",
     "nces_id": "",
-    "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=iSucceed+Virtual+High+School&State=16",
+    "source_url": "https://www.bk.org/",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
   },
   {
-    "school_name": "Inspire Connections Academy",
-    "district_name": "Inspire Connections Academy Inc.",
+    "school_name": "Riverstone International School",
+    "district_name": "Riverstone International School",
     "county": "Ada",
     "state": "ID",
     "grades_served": "9-12",
-    "school_type": "Online public high school",
+    "school_type": "private",
     "address": "",
     "city": "Boise",
     "zip": "",
@@ -2095,9 +2139,94 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "latitude": "",
     "longitude": "",
     "nces_id": "",
-    "source_url": "https://nces.ed.gov/ccd/schoolsearch/school_list.asp?Search=1&InstName=Inspire+Connections+Academy&State=16",
+    "source_url": "https://www.riverstoneschool.org/",
     "date_imported": "2026-07-10",
     "date_verified": "2026-07-10",
-    "verification_status": "unverified"
+    "verification_status": "unverified",
+    "territory_status": "included"
+  },
+  {
+    "school_name": "Cole Valley Christian Schools",
+    "district_name": "Cole Valley Christian Schools",
+    "county": "Ada",
+    "state": "ID",
+    "grades_served": "9-12",
+    "school_type": "private",
+    "address": "",
+    "city": "Meridian",
+    "zip": "",
+    "main_phone": "",
+    "website": "",
+    "latitude": "",
+    "longitude": "",
+    "nces_id": "",
+    "source_url": "https://www.cvcsonline.org/",
+    "date_imported": "2026-07-10",
+    "date_verified": "2026-07-10",
+    "verification_status": "unverified",
+    "territory_status": "included"
+  },
+  {
+    "school_name": "The Ambrose School",
+    "district_name": "The Ambrose School",
+    "county": "Ada",
+    "state": "ID",
+    "grades_served": "9-12",
+    "school_type": "private",
+    "address": "",
+    "city": "Meridian",
+    "zip": "",
+    "main_phone": "",
+    "website": "",
+    "latitude": "",
+    "longitude": "",
+    "nces_id": "",
+    "source_url": "https://theambroseschool.org/",
+    "date_imported": "2026-07-10",
+    "date_verified": "2026-07-10",
+    "verification_status": "unverified",
+    "territory_status": "included"
+  },
+  {
+    "school_name": "Boise Christian School",
+    "district_name": "Boise Christian School",
+    "county": "Ada",
+    "state": "ID",
+    "grades_served": "9-12",
+    "school_type": "private",
+    "address": "",
+    "city": "Boise",
+    "zip": "",
+    "main_phone": "",
+    "website": "",
+    "latitude": "",
+    "longitude": "",
+    "nces_id": "",
+    "source_url": "https://boisechristian.org/",
+    "date_imported": "2026-07-10",
+    "date_verified": "2026-07-10",
+    "verification_status": "unverified",
+    "territory_status": "included"
+  },
+  {
+    "school_name": "Gem Prep: Meridian South",
+    "district_name": "Gem Innovation Schools",
+    "county": "Ada",
+    "state": "ID",
+    "grades_served": "9-12",
+    "school_type": "charter",
+    "address": "",
+    "city": "Meridian",
+    "zip": "",
+    "main_phone": "",
+    "website": "",
+    "latitude": "",
+    "longitude": "",
+    "nces_id": "",
+    "source_url": "https://www.gemprep.org/meridiansouth",
+    "date_imported": "2026-07-10",
+    "date_verified": "2026-07-10",
+    "verification_status": "unverified",
+    "territory_status": "included"
   }
 ];
