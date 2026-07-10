@@ -1,4 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-.leaflet-container { height: 70vh; width: 100%; border-radius: 1rem; }
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  border-color: theme('colors.slate.800');
+}
+
+a {
+  color: inherit;
+}
+
+.leaflet-container {
+  height: 70vh;
+  width: 100%;
+  border: 1px solid theme('colors.slate.800');
+  border-radius: 1rem;
+}
