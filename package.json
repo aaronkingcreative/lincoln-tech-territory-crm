@@ -1,0 +1,38 @@
+{
+  "name": "lincoln-tech-territory-crm",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed:schools": "tsx scripts/seed-schools.ts",
+    "crawl:schools": "tsx scripts/crawl-schools.ts",
+    "crawl:contacts": "tsx scripts/crawl-contacts.ts",
+    "export:xlsx": "tsx scripts/export-xlsx.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.48.1",
+    "cheerio": "1.0.0",
+    "leaflet": "1.9.4",
+    "next": "14.2.23",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "xlsx": "0.18.5",
+    "zod": "3.24.1"
+  },
+  "devDependencies": {
+    "@types/leaflet": "1.9.16",
+    "@types/node": "22.10.5",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.23",
+    "postcss": "8.4.49",
+    "tailwindcss": "3.4.17",
+    "tsx": "4.19.2",
+    "typescript": "5.7.3"
+  }
+}

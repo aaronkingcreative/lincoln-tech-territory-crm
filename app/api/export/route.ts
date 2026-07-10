@@ -1,0 +1,3 @@
+import { createServiceClient } from '@/lib/supabase';
+import { utils, write } from 'xlsx';
+export async function GET(){ const db=createServiceClient(); const tables=['districts','schools','contacts','programs','recruiting_notes']; const wb=utils.book_new(); for (const t of tables){ const {data}=await db.from(t).select('*'); utils.book_append_sheet(wb, utils.json_to_sheet(data ?? []), t.slice(0,31)); } const buf=write(wb,{type:'buffer',bookType:'xlsx'}); return new Response(buf,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="lincoln-tech-territory.xlsx"'}})}
