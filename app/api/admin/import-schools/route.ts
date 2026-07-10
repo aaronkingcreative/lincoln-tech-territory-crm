@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const before = await dashboard();
     const summary = await importTerritorySchools();
     const after = await dashboard();
-    return NextResponse.json({ importedBy: admin.email, before, after, summary });
+    return NextResponse.json({ importedBy: admin.email, importedAt: new Date().toISOString(), before, after, summary });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'School import failed' },
