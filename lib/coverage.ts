@@ -4,7 +4,7 @@ import { createServiceClient, hasSupabaseServiceCredentials } from './supabase';
 export type DbRow = Record<string, any>;
 const norm = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/&/g, ' and ').replace(/\b(sr|senior)\b/g, '').replace(/\bhigh school\b/g, 'high').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 const has = (v: unknown) => String(v ?? '').trim().length > 0;
-const role = (c: DbRow, words: string[]) => words.some((w) => norm(`${c.title} ${c.program_area} ${c.extraction_notes}`).includes(norm(w)));
+const role = (c: DbRow, words: string[]) => words.some((w) => norm(`${c.title} ${c.role_category} ${c.program_area} ${c.extraction_notes}`).includes(norm(w)));
 const schoolKey = (name: unknown, county: unknown, state: unknown) => `${norm(name)}|${norm(county)}|${norm(state)}`;
 const districtKey = (name: unknown, county: unknown, state: unknown) => `${norm(name)}|${norm(county)}|${norm(state)}`;
 const urlKey = (value: unknown) => { try { const url = new URL(String(value ?? '')); url.hash = ''; url.hostname = url.hostname.toLowerCase().replace(/^www\./, ''); url.pathname = url.pathname.replace(/\/+$|\/index\.(html?|php)$/i, '') || '/'; return url.toString(); } catch { return String(value ?? '').trim(); } };
@@ -40,7 +40,7 @@ export async function getTerritoryData() {
 }
 
 export function contactsForSchool(contacts: DbRow[], schoolId: string) { return contacts.filter((c) => c.school_id === schoolId); }
-export function schoolFlags(s: DbRow | undefined, contacts: DbRow[]) { const cs = s?.id ? contactsForSchool(contacts, s.id) : []; return { exists: !!s, address: has(s?.address), phone: has(s?.phone), website: has(s?.website), source: has(s?.source_url), contacts: cs.length > 0, principal: cs.some((c) => role(c, ['principal'])), counselor: cs.some((c) => role(c, ['counselor', 'counseling', 'college career'])), cte: cs.some((c) => role(c, ['cte', 'career technical', 'shop', 'automotive', 'welding', 'diesel', 'construction', 'manufacturing'])) }; }
+export function schoolFlags(s: DbRow | undefined, contacts: DbRow[]) { const cs = s?.id ? contactsForSchool(contacts, s.id) : []; return { exists: !!s, address: has(s?.address), phone: has(s?.phone), website: has(s?.website), source: has(s?.source_url), contacts: cs.length > 0, principal: cs.some((c) => role(c, ['principal'])), counselor: cs.some((c) => role(c, ['counselor', 'career_counselor', 'counseling', 'college career'])), cte: cs.some((c) => role(c, ['cte', 'career technical', 'shop', 'automotive', 'welding', 'diesel', 'construction', 'manufacturing'])) }; }
 export function missingItems(s: DbRow, contacts: DbRow[]) { const f = schoolFlags(s, contacts); const out: string[] = []; if (!f.website) out.push('website'); if (!f.phone) out.push('phone'); if (!f.source) out.push('source URL'); if (!f.principal) out.push('principal'); if (!f.counselor) out.push('counselor'); if (!f.cte) out.push('CTE/shop contact'); return out; }
 
 function buildSchoolMatcher(schools: DbRow[]) {
