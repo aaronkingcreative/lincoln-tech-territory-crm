@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { DbRow } from '@/lib/coverage';
 import { ImportFieldChange, ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedType } from '@/lib/json-import';
 import { createServiceClient, hasSupabaseServiceCredentials } from '@/lib/supabase';
+import { likelyDuplicateSchool, requiredSchoolCreateMissing, resolveDistrict, schoolCreatePayload } from '@/lib/school-create';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ type Verification = {
   failed: { target: string; record_id?: string; failures: string[] }[];
 };
 
-const schoolFields = ['phone','website','address','city','state','zip','fax','source_url','source_notes','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','school_type','territory_status'] as const;
+const schoolFields = ['phone','website','address','city','state','zip','fax','source_url','source_notes','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','school_type','territory_status','verification_status','nces_id'] as const;
 const districtFields = ['phone','website','office_address','city','state','zip','superintendent','cte_director','source_url'] as const;
 const result = (): ImportResultGroups & { status?: string; run_id?: string; verification: Verification } => ({ applied: [], updated: [], created: [], skipped: [], unchanged: [], failed: [], warnings: [], affected_record_ids: [], verification: { schools_verified: [], contacts_verified: [], failed: [] } });
 const present = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
@@ -86,7 +87,7 @@ async function applyDb<T>(promise: PromiseLike<{ data: T | null; error: unknown 
 
 async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Promise<{ ok: true } | { ok: false; table: string; reason: string }> {
   const checks = [
-    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status'] },
+    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status','verification_status','nces_id'] },
     { table: 'contacts', columns: ['school_id','district_id','name','title','email','phone','role_category','source_url','source_notes','imported_by_email','imported_at','updated_at','program_area','confidence_score','extraction_notes'] },
     { table: 'ai_update_runs', columns: ['id','imported_by_email','status','started_at','finished_at','item_count','created_count','updated_count','skipped_count','failed_count','input_hash','original_payload','normalized_payload','result_summary','affected_record_ids'] },
   ];
@@ -136,27 +137,43 @@ export async function POST(request: NextRequest) {
       const typeInfo = supportedType(item.type);
       if (!typeInfo) { summary.skipped.push({ ...base, reason: 'Skipped because unsupported item type.', suggested_fix: 'Use one of the supported item types shown in the AI Assisted Update page.' }); continue; }
       if (!typeInfo.importable) { summary.warnings.push({ ...base, reason: 'This item type is recognized but not importable yet.' }); summary.skipped.push({ ...base, reason: 'Recognized but not importable yet.' }); continue; }
-      if (item.type === 'school_update') {
-        if (!school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}`, suggested_fix: 'Check the school name or include school_id.' }); continue; }
-        const c = changesFor(item, school, schoolFields);
+      if (item.type === 'school_update' || item.type === 'school_create') {
+        let activeSchool = school;
+        if (item.type === 'school_create' && activeSchool) { summary.failed.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, reason: `Possible duplicate found: ${activeSchool.name}. Use exact existing school name or include school_id.` }); continue; }
+        if (!activeSchool && (item.type === 'school_create' || item.create_if_missing === true)) {
+          const missing = requiredSchoolCreateMissing(item);
+          if (missing.length) { summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Include district_name, county, state, address or city/state, and a source.' }); continue; }
+          const duplicate = await likelyDuplicateSchool(db, item);
+          if (duplicate) { summary.failed.push({ ...base, record_id: duplicate.id, school_record_id: duplicate.id, reason: `Possible duplicate found: ${duplicate.name}. Use exact existing school name or include school_id.` }); continue; }
+          const districtResult = await resolveDistrict(db, item);
+          if (districtResult.error || !districtResult.district?.id) { summary.failed.push({ ...base, reason: districtResult.error ?? 'District could not be resolved.', suggested_fix: 'Include district_id or clearer district_name/county/state.' }); continue; }
+          const payload = schoolCreatePayload(item, districtResult.district.id, summary.run_id);
+          const insertResponse = await db.from('schools').insert(payload).select('*').single();
+          if (insertResponse.error) throw insertResponse.error;
+          activeSchool = insertResponse.data as DbRow;
+          const row={...base, district: str(districtResult.district.name) ?? base.district, record_id: activeSchool.id, school_record_id: activeSchool.id, district_record_id: districtResult.district.id, fields_changed: Object.entries(payload).filter(([, to]) => present(to)).map(([field, to]) => ({ field, label: label(field), to })), message: districtResult.created ? 'Verified school and district were created.' : 'Verified school was created and linked to the district.'};
+          summary.created.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(activeSchool.name) ?? str(item.school_name) ?? 'New school', record_id: activeSchool.id, verified_fields: ['name','district_id'] }); addId(summary, activeSchool.id); continue;
+        }
+        if (!activeSchool) { summary.failed.push({ ...base, reason: 'School not found. Add create_if_missing: true or use school_create.', suggested_fix: 'Check the school name, include school_id, or intentionally create the school.' }); continue; }
+        const c = changesFor(item, activeSchool, schoolFields);
         if (Object.keys(c.update).length) {
           const updateObject = { ...c.update, updated_at: new Date().toISOString(), last_ai_update_at: new Date().toISOString(), last_ai_update_run_id: summary.run_id };
-          log(summary.run_id, 'write_school', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, update_object: updateObject });
-          const updateResponse = await db.from('schools').update(updateObject).eq('id', school.id).select('*').maybeSingle();
-          log(summary.run_id, 'write_school_response', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, supabase_error: updateResponse.error, returned_updated_row: updateResponse.data });
+          log(summary.run_id, 'write_school', { item_index: index, item_type: item.type, school_name: activeSchool.name, matched_school_id: activeSchool.id, update_object: updateObject });
+          const updateResponse = await db.from('schools').update(updateObject).eq('id', activeSchool.id).select('*').maybeSingle();
+          log(summary.run_id, 'write_school_response', { item_index: index, item_type: item.type, school_name: activeSchool.name, matched_school_id: activeSchool.id, supabase_error: updateResponse.error, returned_updated_row: updateResponse.data });
           if (updateResponse.error) throw updateResponse.error;
           if (!updateResponse.data) throw new Error('Supabase update returned no row for public.schools; update may have matched zero rows or select permission failed.');
           const immediateFailures = verifyFields(updateResponse.data as DbRow, c.changed);
           if (immediateFailures.length) throw new Error(`Supabase returned row did not contain requested changes: ${immediateFailures.join(' ')}`);
-          const rereadResponse = await db.from('schools').select('*').eq('id', school.id).maybeSingle();
-          log(summary.run_id, 'reread_school_response', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, supabase_error: rereadResponse.error, returned_updated_row: rereadResponse.data });
+          const rereadResponse = await db.from('schools').select('*').eq('id', activeSchool.id).maybeSingle();
+          log(summary.run_id, 'reread_school_response', { item_index: index, item_type: item.type, school_name: activeSchool.name, matched_school_id: activeSchool.id, supabase_error: rereadResponse.error, returned_updated_row: rereadResponse.data });
           if (rereadResponse.error) throw rereadResponse.error;
           const reread = rereadResponse.data as DbRow | null;
           const failures = verifyFields(reread, c.changed);
-          log(summary.run_id, 'verify_school', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, update_object: updateObject, verification_result: { ok: failures.length === 0, failures } });
-          if (failures.length) { summary.verification.failed.push({ target: school.name, record_id: school.id, failures }); summary.failed.push({ ...base, record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' '), suggested_fix: 'Check database triggers, column names, and row-level permissions, then retry.' }); }
-          else { const row={...base, record_id: school.id, school_record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(reread?.name) ?? school.name, record_id: school.id, verified_fields: c.changed.map(f => f.field) }); addId(summary, school.id); }
-        } else summary.unchanged.push({ ...base, record_id: school.id, school_record_id: school.id, fields_skipped: c.skipped, reason: 'No school fields changed because supplied values were already present, blank, or intentionally preserved.' });
+          log(summary.run_id, 'verify_school', { item_index: index, item_type: item.type, school_name: activeSchool.name, matched_school_id: activeSchool.id, update_object: updateObject, verification_result: { ok: failures.length === 0, failures } });
+          if (failures.length) { summary.verification.failed.push({ target: activeSchool.name, record_id: activeSchool.id, failures }); summary.failed.push({ ...base, record_id: activeSchool.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' '), suggested_fix: 'Check database triggers, column names, and row-level permissions, then retry.' }); }
+          else { const row={...base, record_id: activeSchool.id, school_record_id: activeSchool.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(reread?.name) ?? activeSchool.name, record_id: activeSchool.id, verified_fields: c.changed.map(f => f.field) }); addId(summary, activeSchool.id); }
+        } else summary.unchanged.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, fields_skipped: c.skipped, reason: 'No school fields changed because supplied values were already present, blank, or intentionally preserved.' });
       } else if (item.type === 'contact_create' || item.type === 'contact_update') {
         const title = str(item.title); if (!contactName && !title) { summary.failed.push({ ...base, reason: 'Contact needs at least name/contact_name or title.' }); continue; }
         if (str(item.school_name) && !school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name)}`, suggested_fix: 'Check school_name or import the school before creating this contact.' }); continue; }
