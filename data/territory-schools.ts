@@ -88,6 +88,27 @@ export const TERRITORY_SCHOOL_SEEDS: TerritorySchoolSeedRow[] = [
     "territory_status": "included"
   },
   {
+    "school_name": "New Plymouth High School",
+    "district_name": "New Plymouth School District #372",
+    "county": "Payette",
+    "state": "ID",
+    "grades_served": "9-12",
+    "school_type": "public",
+    "address": "207 South Plymouth Ave",
+    "city": "New Plymouth",
+    "zip": "83655",
+    "main_phone": "(208) 278-5311",
+    "website": "https://nphs.npschools.us/",
+    "latitude": "",
+    "longitude": "",
+    "nces_id": "",
+    "source_url": "https://nphs.npschools.us/",
+    "date_imported": "2026-07-11",
+    "date_verified": "2026-07-11",
+    "verification_status": "verified",
+    "territory_status": "included"
+  },
+  {
     "school_name": "Parma High School",
     "district_name": "Parma School District",
     "county": "Canyon",
