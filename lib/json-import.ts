@@ -54,6 +54,7 @@ export const roleCategories = [
 
 export const supportedItemTypes = [
   { type: 'school_update', label: 'Update a school', importable: true },
+  { type: 'school_create', label: 'Create a missing school intentionally', importable: true },
   { type: 'district_update', label: 'Update a district', importable: true },
   { type: 'contact_create', label: 'Add a school or district contact', importable: true },
   { type: 'contact_update', label: 'Update an existing contact', importable: true },
@@ -82,6 +83,7 @@ export function normalizeImport(raw: unknown): JsonImportItem[] {
 export const cleanExampleJson = {
   items: [
     { type: 'school_update', school_name: 'American Falls High School', district_name: 'American Falls School District #381', phone: '(208) 226-2531', website: 'https://www.sd381.k12.id.us/o/afhs', address: '2966 South Frontage Road', city: 'American Falls', state: 'ID', zip: '83211', fax: '(208) 226-5853', school_type: 'public', territory_status: 'included', source_url: 'https://www.sd381.k12.id.us/o/afhs', overwrite: false },
+    { type: 'school_create', school_name: 'Skyline Senior High School', district_name: 'Idaho Falls School District 91', county: 'Bonneville', state: 'ID', city: 'Idaho Falls', address: '1767 Blue Sky Drive, Idaho Falls, ID 83402', phone: '(208) 525-7770', website: 'https://shs.ifschools.org/', source_url: 'https://shs.ifschools.org/', source_notes: 'Official school site and NCES.', overwrite: false },
     { type: 'district_update', district_name: 'American Falls School District #381', phone: '208-226-5173', website: 'https://www.sd381.k12.id.us/', address: '827 Fort Hall', city: 'American Falls', state: 'ID', zip: '83211', source_url: 'https://www.sd381.k12.id.us/', overwrite: false },
     { type: 'contact_create', school_name: 'Example High School', contact_name: 'Jane Smith', title: 'Counselor', role_category: 'counselor', email: '', phone: '', source_url: 'https://example.edu/staff', source_notes: 'Copied from staff directory.', confidence: 'medium' },
     { type: 'school_note_create', school_name: 'American Falls High School', note_type: 'program', note: 'Career Day article may indicate recruiting timing.', source_url: 'https://www.sd381.k12.id.us/o/afhs' },
