@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { DbRow } from '@/lib/coverage';
 import { ImportFieldChange, ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedType } from '@/lib/json-import';
-import { createServiceClient } from '@/lib/supabase';
+import { createServiceClient, hasSupabaseServiceCredentials } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,16 +65,16 @@ function inferRole(title?: string, requested?: string) {
   return 'unknown';
 }
 function dbReason(error: unknown) {
-  const e = error as { message?: unknown; details?: unknown; hint?: unknown };
+  const e = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
   const msg = [e.message, e.details, e.hint].filter(Boolean).join(' ');
-  return { reason: `Database write failed: ${msg || 'Unknown Supabase error.'}`, suggested_fix: /column .* does not exist|schema cache|Could not find .* column/i.test(msg) ? 'Run the latest additive Supabase schema migration and retry the import.' : 'Check the technical details, correct the item or database schema, and retry.' };
+  return { reason: `Database write failed: ${msg || 'Unknown Supabase error.'}`, suggested_fix: /column .* does not exist|schema cache|Could not find .* column/i.test(msg) ? 'Run the latest additive Supabase schema migration and retry the import.' : 'Check the technical details, correct the item or database schema, and retry.', database_error: { message: e.message, details: e.details, hint: e.hint, code: e.code } };
 }
 async function applyDb<T>(promise: PromiseLike<{ data: T | null; error: unknown }>) { const response = await promise; if (response.error) throw response.error; return response.data; }
 
 async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Promise<{ ok: true } | { ok: false; table: string; reason: string }> {
   const checks = [
-    { table: 'schools', columns: ['phone','website','address','city','state','zip','fax','special_programs','program_notes','source_url','source_notes','school_type','territory_status'] },
-    { table: 'contacts', columns: ['school_id','district_id','name','title','email','phone','role_category','program_area','source_url','source_notes','confidence_score','extraction_notes','imported_by_email','imported_at'] },
+    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','source_url','source_notes','updated_at','city','state','zip','fax','school_type','territory_status'] },
+    { table: 'contacts', columns: ['school_id','district_id','name','title','email','phone','role_category','source_url','source_notes','imported_by_email','imported_at','updated_at','program_area','confidence_score','extraction_notes'] },
     { table: 'ai_update_runs', columns: ['id','imported_by_email','status','started_at','finished_at','item_count','created_count','updated_count','skipped_count','failed_count','input_hash','original_payload','normalized_payload','result_summary','affected_record_ids'] },
   ];
   for (const check of checks) {
@@ -86,25 +86,31 @@ async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Pr
 
 export async function POST(request: NextRequest) {
   const admin = await requireAdmin(request); if ('error' in admin) return NextResponse.json({ error: admin.error }, { status: admin.status });
+  if (!hasSupabaseServiceCredentials()) return NextResponse.json({ ...result(), ok: false, status: 'failed', failed: [{ type: 'service_role_check', reason: 'Admin apply route is missing server-side Supabase service role credentials.' }] }, { status: 500 });
   const db = createServiceClient(); const summary = result(); let raw: unknown; let items: JsonImportItem[];
   try { raw = await request.json(); items = normalizeImport(raw); } catch (error) { return NextResponse.json({ ...summary, ok: false, status: 'failed', failed: [{ type: 'import', reason: error instanceof Error ? error.message : 'Invalid JSON import payload.' }] }, { status: 400 }); }
 
   const originalPayload = raw;
   const normalizedPayload = { items };
   const inputHash = createHash('sha256').update(JSON.stringify(normalizedPayload)).digest('hex');
-  const { data: run } = await db.from('ai_update_runs').insert({ imported_by_email: admin.email, status: 'running', item_count: items.length, input_hash: inputHash, original_payload: originalPayload, normalized_payload: normalizedPayload }).select('id').maybeSingle();
-  summary.run_id = str(run?.id);
-  log(summary.run_id, 'started', { item_count: items.length });
 
   const schemaCheck = await verifyApplySchema(db);
   if (!schemaCheck.ok) {
     summary.ok = false;
     summary.status = 'failed';
     summary.failed.push({ type: 'schema_check', target_name: schemaCheck.table, reason: `Required AI Assisted Update schema is missing or incompatible for ${schemaCheck.table}: ${schemaCheck.reason}`, suggested_fix: 'Run the latest additive Supabase schema.sql migration, then retry the import.' });
-    try { await db.from('ai_update_runs').update({ status: summary.status, finished_at: new Date().toISOString(), item_count: items.length, created_count: 0, updated_count: 0, skipped_count: 0, failed_count: 1, result_summary: summary, affected_record_ids: [] }).eq('id', summary.run_id); } catch { /* audit update best effort */ }
     log(summary.run_id, 'schema_check_failed', { table: schemaCheck.table, reason: schemaCheck.reason });
     return NextResponse.json(summary, { status: 422 });
   }
+
+  const { data: run, error: runError } = await db.from('ai_update_runs').insert({ imported_by_email: admin.email, status: 'running', item_count: items.length, input_hash: inputHash, original_payload: originalPayload, normalized_payload: normalizedPayload }).select('id').maybeSingle();
+  if (runError || !run?.id) {
+    const reason = runError ? dbReason(runError).reason : 'AI update audit run was not created.';
+    log(undefined, 'audit_run_create_failed', { reason });
+    return NextResponse.json({ ...summary, ok: false, status: 'failed', failed: [{ type: 'ai_update_runs', reason, suggested_fix: 'Check ai_update_runs schema and service-role write permissions before retrying.' }] }, { status: 500 });
+  }
+  summary.run_id = str(run.id);
+  log(summary.run_id, 'started', { item_count: items.length, uses_service_role_client: true });
 
   for (const [index, item] of items.entries()) {
     const school = await findSchool(db, item); const district = await findDistrict(db, item, school); const contactName = str(item.contact_name) ?? str(item.name);
@@ -118,11 +124,20 @@ export async function POST(request: NextRequest) {
         if (!school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}`, suggested_fix: 'Check the school name or include school_id.' }); continue; }
         const c = changesFor(item, school, schoolFields);
         if (Object.keys(c.update).length) {
-          log(summary.run_id, 'write_school', { school_id: school.id, fields: Object.keys(c.update) });
-          await applyDb<DbRow>(db.from('schools').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', school.id).select('id').maybeSingle());
-          const reread = await applyDb<DbRow>(db.from('schools').select('*').eq('id', school.id).maybeSingle());
+          const updateObject = { ...c.update, updated_at: new Date().toISOString() };
+          log(summary.run_id, 'write_school', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, update_object: updateObject });
+          const updateResponse = await db.from('schools').update(updateObject).eq('id', school.id).select('*').maybeSingle();
+          log(summary.run_id, 'write_school_response', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, supabase_error: updateResponse.error, returned_updated_row: updateResponse.data });
+          if (updateResponse.error) throw updateResponse.error;
+          if (!updateResponse.data) throw new Error('Supabase update returned no row for public.schools; update may have matched zero rows or select permission failed.');
+          const immediateFailures = verifyFields(updateResponse.data as DbRow, c.changed);
+          if (immediateFailures.length) throw new Error(`Supabase returned row did not contain requested changes: ${immediateFailures.join(' ')}`);
+          const rereadResponse = await db.from('schools').select('*').eq('id', school.id).maybeSingle();
+          log(summary.run_id, 'reread_school_response', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, supabase_error: rereadResponse.error, returned_updated_row: rereadResponse.data });
+          if (rereadResponse.error) throw rereadResponse.error;
+          const reread = rereadResponse.data as DbRow | null;
           const failures = verifyFields(reread, c.changed);
-          log(summary.run_id, 'verify_school', { school_id: school.id, ok: failures.length === 0, failures });
+          log(summary.run_id, 'verify_school', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, update_object: updateObject, verification_result: { ok: failures.length === 0, failures } });
           if (failures.length) { summary.verification.failed.push({ target: school.name, record_id: school.id, failures }); summary.failed.push({ ...base, record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' '), suggested_fix: 'Check database triggers, column names, and row-level permissions, then retry.' }); }
           else { const row={...base, record_id: school.id, school_record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(reread?.name) ?? school.name, record_id: school.id, verified_fields: c.changed.map(f => f.field) }); addId(summary, school.id); }
         } else summary.unchanged.push({ ...base, record_id: school.id, school_record_id: school.id, fields_skipped: c.skipped, reason: 'No school fields changed because supplied values were already present, blank, or intentionally preserved.' });
@@ -155,12 +170,19 @@ export async function POST(request: NextRequest) {
         if (!district) { summary.failed.push({ ...base, reason: `District not found: ${str(item.district_name) ?? 'missing district_name'}` }); continue; }
         const c = changesFor(item, district, districtFields); if (Object.keys(c.update).length) { const updated = await applyDb<DbRow>(db.from('districts').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', district.id).select('*').maybeSingle()); const failures = verifyFields(updated, c.changed); if (failures.length) summary.failed.push({ ...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') }); else { const row={...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, district.id); } } else summary.unchanged.push({ ...base, record_id: district.id, fields_skipped: c.skipped, reason: 'No district fields changed because supplied values were already present, blank, or intentionally preserved.' });
       } else summary.skipped.push({ ...base, reason: `${item.type} is previewable but this importer does not yet have an apply handler.`, suggested_fix: 'Use a supported update/create handler or ask Aaron to add an apply handler for this item type.' });
-    } catch (error: unknown) { log(summary.run_id, 'error', { item_index: index, item_type: item.type, error: dbReason(error).reason }); summary.failed.push({ ...base, ...dbReason(error), database_error: error }); }
+    } catch (error: unknown) { log(summary.run_id, 'error', { item_index: index, item_type: item.type, error: dbReason(error).reason }); summary.failed.push({ ...base, ...dbReason(error), database_error: dbReason(error).database_error ?? { message: error instanceof Error ? error.message : String(error) } }); }
   }
   summary.ok = summary.failed.length === 0;
   summary.status = summary.failed.length ? (summary.applied.length || summary.created.length || summary.updated.length ? 'partial_success' : 'failed') : 'success';
   const counts = { created_count: summary.created.length, updated_count: summary.updated.length, skipped_count: summary.skipped.length + summary.unchanged.length, failed_count: summary.failed.length };
-  try { await db.from('ai_update_runs').update({ status: summary.status, finished_at: new Date().toISOString(), ...counts, result_summary: summary, affected_record_ids: summary.affected_record_ids }).eq('id', summary.run_id); } catch { /* audit update must not mask import result */ }
+  const auditResponse = await db.from('ai_update_runs').update({ status: summary.status, finished_at: new Date().toISOString(), ...counts, result_summary: summary, affected_record_ids: summary.affected_record_ids }).eq('id', summary.run_id).select('id,status,item_count,created_count,updated_count,failed_count,affected_record_ids').maybeSingle();
+  log(summary.run_id, 'audit_run_update_response', { supabase_error: auditResponse.error, returned_updated_row: auditResponse.data });
+  if (auditResponse.error || !auditResponse.data) {
+    const reason = auditResponse.error ? dbReason(auditResponse.error).reason : 'AI update audit run finalization returned no row.';
+    summary.ok = false;
+    summary.status = summary.applied.length || summary.created.length || summary.updated.length ? 'partial_success' : 'failed';
+    summary.failed.push({ type: 'ai_update_runs', reason, suggested_fix: 'Check ai_update_runs schema and service-role write permissions; database changes were not reported as a green commit because audit finalization failed.' });
+  }
   try { await db.from('json_imports').insert({ imported_by_email: admin.email, import_type: 'manual_json_import', raw_json: raw, summary, status: summary.ok ? 'imported' : 'failed' }); } catch { /* legacy audit best effort */ }
   for (const path of ['/schools','/contacts','/coverage','/export','/admin/json-import']) revalidatePath(path);
   for (const id of summary.affected_record_ids ?? []) revalidatePath(`/schools/${id}`);
