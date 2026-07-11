@@ -73,7 +73,7 @@ function sameDomain(child: string, parent: string) {
 }
 
 function absUrl(href: string, base: string) { try { return normalizeTargetUrl(new URL(href, base).toString()); } catch { return null; } }
-function confidence(title: string, email?: string | null) { return email && title ? 'high' : title ? 'medium' : 'low'; }
+function confidence(title: string, email?: string | null) { return email && title ? 0.9 : title ? 0.7 : 0.4; }
 function roleFromContext(context: string) { const lower = context.toLowerCase(); return ROLE_KEYWORDS.find((keyword) => lower.includes(keyword)); }
 
 async function finalizeRun(db: Db, runId: string | undefined, status: 'complete' | 'failed', summary: Partial<BatchSummary> & Record<string, unknown>) {

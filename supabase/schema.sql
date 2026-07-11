@@ -174,3 +174,59 @@ alter table contacts add column if not exists imported_by_email text;
 alter table contacts add column if not exists imported_at timestamptz;
 alter table schools add column if not exists special_programs text;
 alter table schools add column if not exists program_notes text;
+
+-- AI assisted update audit trail and verified apply support. Additive and safe to rerun.
+alter table schools add column if not exists source_notes text;
+alter table contacts add column if not exists role_category text;
+alter table contacts add column if not exists source_notes text;
+alter table contacts add column if not exists imported_by_email text;
+alter table contacts add column if not exists imported_at timestamptz;
+
+create table if not exists ai_update_runs (
+  id uuid primary key default gen_random_uuid(),
+  imported_by_email text,
+  status text,
+  started_at timestamptz default now(),
+  finished_at timestamptz,
+  item_count integer,
+  created_count integer,
+  updated_count integer,
+  skipped_count integer,
+  failed_count integer,
+  input_hash text,
+  original_payload jsonb,
+  normalized_payload jsonb,
+  result_summary jsonb,
+  affected_record_ids jsonb
+);
+alter table ai_update_runs enable row level security;
+
+-- Required AI Assisted Update apply columns for production. Additive/safe to rerun.
+alter table schools add column if not exists special_programs text;
+alter table schools add column if not exists program_notes text;
+alter table schools add column if not exists source_notes text;
+alter table schools add column if not exists fax text;
+
+alter table contacts add column if not exists imported_by_email text;
+alter table contacts add column if not exists imported_at timestamptz;
+alter table contacts add column if not exists source_url text;
+alter table contacts add column if not exists source_notes text;
+alter table contacts add column if not exists role_category text;
+alter table contacts add column if not exists program_area text;
+alter table contacts add column if not exists confidence_score numeric;
+alter table contacts add column if not exists extraction_notes text;
+
+-- Existing environments may have legacy text confidence values. Preserve meaning while
+-- making the schema match importer writes and verification expectations.
+alter table contacts drop constraint if exists contacts_confidence_score_check;
+alter table contacts
+  alter column confidence_score type numeric
+  using case
+    when confidence_score is null then null
+    when lower(confidence_score::text) = 'high' then 0.9
+    when lower(confidence_score::text) = 'medium' then 0.7
+    when lower(confidence_score::text) in ('low','manual_low') then 0.4
+    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' then confidence_score::numeric
+    else null
+  end;
+alter table contacts add constraint contacts_confidence_score_check check (confidence_score is null or (confidence_score >= 0 and confidence_score <= 1));
