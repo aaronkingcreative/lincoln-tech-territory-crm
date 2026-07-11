@@ -141,10 +141,15 @@ export async function POST(request: NextRequest) {
         } else {
           log(summary.run_id, 'insert_contact', { school_id: school?.id, contact: contactName, title });
           const data = await applyDb<DbRow>(db.from('contacts').insert(payload).select('*').single());
-          const reread = data?.id ? await applyDb<DbRow>(db.from('contacts').select('*').eq('id', data.id).single()) : null;
+          if (!data?.id) {
+            summary.failed.push({ ...base, school_record_id: school?.id, reason: 'Contact insert/update did not return a record id.', suggested_fix: 'Check Supabase insert/select permissions and contacts table schema.' });
+            continue;
+          }
+          const contactRecordId = data.id;
+          const reread = await applyDb<DbRow>(db.from('contacts').select('*').eq('id', contactRecordId).single());
           const failures = verifyFields(reread, [{ field:'school_id', to: school?.id }, { field:'name', to: contactName }, { field:'title', to: title }].filter(f => present(f.to)));
-          if (failures.length) { summary.verification.failed.push({ target: contactName ?? title ?? 'contact', record_id: data?.id, failures }); summary.failed.push({ ...base, record_id:data?.id, school_record_id: school?.id, reason: failures.join(' ') }); }
-          else { const row={...base, record_id:data?.id, school_record_id: school?.id, fields_changed:[{field:'contact',label:'Contact',to:[contactName,title,email || '(no email)',phone].filter(Boolean).join(' · ')},{field:'school_id',label:'Linked school',to:school?.name ?? school?.id}], message:'Verified contact was created and linked to the school.'}; summary.created.push(row); summary.applied.push(row); summary.verification.contacts_verified.push({ contact: contactName ?? title ?? 'contact', school: school?.name, record_id: data.id }); addId(summary, school?.id ?? data?.id); }
+          if (failures.length) { summary.verification.failed.push({ target: contactName ?? title ?? 'contact', record_id: contactRecordId, failures }); summary.failed.push({ ...base, record_id:contactRecordId, school_record_id: school?.id, reason: failures.join(' ') }); }
+          else { const row={...base, record_id:contactRecordId, school_record_id: school?.id, fields_changed:[{field:'contact',label:'Contact',to:[contactName,title,email || '(no email)',phone].filter(Boolean).join(' · ')},{field:'school_id',label:'Linked school',to:school?.name ?? school?.id}], message:'Verified contact was created and linked to the school.'}; summary.created.push(row); summary.applied.push(row); summary.verification.contacts_verified.push({ contact: contactName ?? title ?? 'contact', school: school?.name, record_id: contactRecordId }); addId(summary, school?.id ?? contactRecordId); }
         }
       } else if (item.type === 'district_update') {
         if (!district) { summary.failed.push({ ...base, reason: `District not found: ${str(item.district_name) ?? 'missing district_name'}` }); continue; }
