@@ -76,12 +76,18 @@ export async function POST(request: NextRequest) {
         const row={...base, record_id:data?.id, fields_changed:[{field:'title',label:'Title',to:title}]}; summary.created.push(row); summary.applied.push(row); addId(summary, data?.id);
       } else if (item.type === 'contact_create' || item.type === 'contact_update') {
         const name = str(item.contact_name) ?? str(item.name), title = str(item.title); if (!name && !title) { summary.failed.push({ ...base, reason: 'Failed because contact needs at least contact_name or title.' }); continue; }
-        const role = roleCategories.includes(str(item.role_category) as any) ? str(item.role_category) : 'unknown'; const confidence = str(item.email) ? (str(item.confidence) ?? 'medium') : 'low';
-        const contactFilters = [name ? `name.ilike.${name}` : '', str(item.email) ? `email.eq.${str(item.email)}` : ''].filter(Boolean);
+        const contactEmail = str(item.email);
+        const contactPhone = str(item.phone);
+        const contactTitle = title;
+        const contactName = name;
+        const requestedRole = str(item.role_category);
+        const role = requestedRole && roleCategories.some(category => category === requestedRole) ? requestedRole : 'unknown';
+        const confidence = contactEmail ? (str(item.confidence) ?? 'medium') : 'low';
+        const contactFilters = [contactName ? `name.ilike.${contactName}` : '', contactEmail ? `email.eq.${contactEmail}` : ''].filter(Boolean);
         const existing = item.type === 'contact_update' && contactFilters.length ? (await db.from('contacts').select('*').or(contactFilters.join(',')).maybeSingle()).data as DbRow | null : null;
-        const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name, title, email: str(item.email), phone: str(item.phone), program_area: role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: confidence, extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
+        const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name: contactName, title: contactTitle, email: contactEmail, phone: contactPhone, program_area: role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: confidence, extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
         const q = existing ? await db.from('contacts').update(payload).eq('id', existing.id).select('id').single() : await db.from('contacts').insert(payload).select('id').single(); if (q.error) throw q.error;
-        const row={...base, record_id:q.data?.id, fields_changed:[{field:'contact',label:'Contact',to:[name,title,email].filter(Boolean).join(' · ')}]}; (existing ? summary.updated : summary.created).push(row); summary.applied.push(row); addId(summary, q.data?.id);
+        const row={...base, record_id:q.data?.id, fields_changed:[{field:'contact',label:'Contact',to:[contactName,contactTitle,contactEmail].filter(Boolean).join(' · ')}]}; (existing ? summary.updated : summary.created).push(row); summary.applied.push(row); addId(summary, q.data?.id);
       } else if (item.type === 'contact_log_create') {
         if (!school && !district) { summary.failed.push({ ...base, reason: 'Failed because school or district not found.' }); continue; }
         const { data, error } = await db.from('contact_logs').insert({ school_id: school?.id, district_id: district?.id ?? school?.district_id, contacted_by_email: admin.email, contact_method: str(item.contact_method) ?? 'other', outcome: str(item.outcome) ?? 'other', notes: str(item.notes), contacted_at: str(item.contacted_at) ?? new Date().toISOString() }).select('id').single(); if (error) throw error; const row={...base, record_id:data?.id}; summary.created.push(row); summary.applied.push(row); addId(summary, data?.id);
