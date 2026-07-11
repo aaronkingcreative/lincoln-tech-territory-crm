@@ -11,6 +11,8 @@ alter table districts add column if not exists county text;
 alter table districts add column if not exists state text;
 alter table districts add column if not exists superintendent text;
 alter table districts add column if not exists office_address text;
+alter table districts add column if not exists city text;
+alter table districts add column if not exists zip text;
 alter table districts add column if not exists phone text;
 alter table districts add column if not exists website text;
 alter table districts add column if not exists cte_director text;
@@ -45,6 +47,7 @@ alter table schools add column if not exists address text;
 alter table schools add column if not exists city text;
 alter table schools add column if not exists zip text;
 alter table schools add column if not exists phone text;
+alter table schools add column if not exists fax text;
 alter table schools add column if not exists website text;
 alter table schools add column if not exists latitude numeric;
 alter table schools add column if not exists longitude numeric;
@@ -126,6 +129,9 @@ alter table contacts add column if not exists source_notes text;
 alter table contacts add column if not exists imported_by_email text;
 alter table contacts add column if not exists imported_at timestamptz;
 alter table recruiting_notes add column if not exists source text;
+alter table recruiting_notes add column if not exists note_type text;
+alter table recruiting_notes add column if not exists source_url text;
+alter table recruiting_tasks add column if not exists source_url text;
 alter table recruiting_tasks enable row level security; alter table dashboard_objectives enable row level security; alter table json_imports enable row level security;
 
 insert into dashboard_objectives (title,description,objective_type,status,progress_current,progress_target,recommended_next_action,sort_order)
