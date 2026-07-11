@@ -17,7 +17,7 @@ https://lincoln-tech-territory-crm.vercel.app
 
 Discovery targets Ontario High School / Ontario School District in Ontario, Oregon plus southern Idaho schools from Ontario east to Saint Anthony, then south through Idaho to the Utah border. The focus is the I-84, I-86, and I-15 corridor.
 
-Approved Idaho counties are Ada, Canyon, Payette, Washington, Gem, Elmore, Gooding, Jerome, Twin Falls, Cassia, Minidoka, Lincoln, Power, Bannock, Bingham, Bonneville, Jefferson, Madison, Fremont, Teton, and Clark. Utah schools are excluded. Other Oregon schools are excluded unless manually added. Ada County is included because Boise is in Ken King's approved Lincoln Tech recruiting boundary; Ada seed rows cover public high schools, charter/alternative high schools, private high schools, and career/technical programs where represented in official/authoritative public data. Online/virtual schools are intentionally excluded from the active baseline at this time.
+Approved Idaho counties are Ada, Owyhee, Canyon, Payette, Washington, Gem, Elmore, Gooding, Jerome, Twin Falls, Cassia, Minidoka, Lincoln, Power, Bannock, Bingham, Bonneville, Jefferson, Madison, Fremont, Teton, and Clark. Utah schools are excluded. Other Oregon schools are excluded unless manually added. Ada County is included because Boise is in Ken King's approved Lincoln Tech recruiting boundary; Ada seed rows cover public high schools, charter/alternative high schools, private high schools, and career/technical programs where represented in official/authoritative public data. Owyhee County is included with high-school-level public targets only: Marsing High School, Homedale High School, and Rimrock Jr/Sr High School; Pleasant Valley Elementary District and Three Creek Joint Elementary District are district context only, not recruiting schools. Owyhee High School in Meridian remains an Ada County / West Ada School District row and must not be treated as an Owyhee County school. Online/virtual schools are intentionally excluded from the active baseline at this time.
 
 ### Territory review
 
@@ -27,7 +27,7 @@ Admins can review possible future boundary additions at:
 /admin/territory-review
 ```
 
-The review list currently tracks Owyhee, Oneida, Franklin, Bear Lake, Caribou, Blaine, Camas, and Butte as excluded/review-only candidate counties. They are not imported by discovery or the seed importer unless explicitly approved and added to the active territory baseline.
+The review list currently tracks Oneida, Franklin, Bear Lake, Caribou, Blaine, Camas, and Butte as excluded/review-only candidate counties. They are not imported by discovery or the seed importer unless explicitly approved and added to the active territory baseline.
 
 ## Discovery system
 
