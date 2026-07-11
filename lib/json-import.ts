@@ -8,14 +8,25 @@ export type JsonImportItem = {
 
 export type ImportFieldChange = { field: string; label: string; from?: unknown; to?: unknown; reason?: string };
 export type ImportResultItem = {
+  item_index?: number;
   type: string;
   target_name?: string;
   school?: string;
   district?: string;
+  contact?: string;
   record_id?: string;
+  school_record_id?: string;
+  district_record_id?: string;
+  contact_record_id?: string;
+  task_record_id?: string;
+  note_record_id?: string;
+  status?: string;
+  action?: string;
   source_url?: string | null;
   fields_changed?: ImportFieldChange[];
+  fields_unchanged?: ImportFieldChange[];
   fields_skipped?: ImportFieldChange[];
+  warnings?: string[];
   reason?: string;
   database_error?: unknown;
   suggested_fix?: string;

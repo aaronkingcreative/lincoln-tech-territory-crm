@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/admin-auth';
 import { DbRow } from '@/lib/coverage';
-import { ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedType } from '@/lib/json-import';
+import { ImportFieldChange, ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedType } from '@/lib/json-import';
 import { createServiceClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -27,8 +27,8 @@ async function findDistrict(db: ReturnType<typeof createServiceClient>, item: Js
   return null;
 }
 function sameValue(a: unknown, b: unknown) { return String(a ?? '').trim() === String(b ?? '').trim(); }
-function changesFor(item: JsonImportItem, existing: DbRow, fields: readonly string[]) {
-  const changed: any[] = [], skipped: any[] = [], update: Record<string, unknown> = {};
+function changesFor(item: Record<string, unknown> & { overwrite?: boolean }, existing: DbRow, fields: readonly string[]) {
+  const changed: ImportFieldChange[] = [], skipped: ImportFieldChange[] = [], update: Record<string, unknown> = {};
   for (const field of fields) {
     const incoming = field === 'office_address' ? (item.office_address ?? item.address) : item[field];
     if (!present(incoming)) { if (field in item) skipped.push({ field, label: label(field), reason: 'Skipped because value was blank.' }); continue; }
@@ -47,12 +47,13 @@ function inferRole(title?: string, requested?: string) {
   if (t.includes('athletic') || t.includes('activities')) return 'office';
   return 'unknown';
 }
-function dbReason(error: any) {
-  const msg = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ');
+function dbReason(error: unknown) {
+  const e = error as { message?: unknown; details?: unknown; hint?: unknown };
+  const msg = [e.message, e.details, e.hint].filter(Boolean).join(' ');
   if (/column .* does not exist|schema cache|Could not find .* column/i.test(msg)) return { reason: `Database schema is missing a required column: ${msg}`, suggested_fix: 'Run the latest additive Supabase schema migration and retry the import.' };
   return { reason: `Database write failed: ${msg || 'Unknown Supabase error.'}`, suggested_fix: 'Check the technical details, correct the item or database schema, and retry.' };
 }
-async function applyDb<T>(promise: PromiseLike<{ data: T | null; error: any }>) {
+async function applyDb<T>(promise: PromiseLike<{ data: T | null; error: unknown }>) {
   const response = await promise;
   if (response.error) throw response.error;
   return response.data;
@@ -74,30 +75,30 @@ export async function POST(request: NextRequest) {
     const base = { type: item.type, target_name: str(item.school_name) ?? str(item.district_name) ?? contactName ?? str(item.title), school: str(school?.name) ?? str(item.school_name), district: str(district?.name) ?? str(item.district_name), source_url: item.source_url };
     try {
       const typeInfo = supportedType(item.type);
-      if (!typeInfo) { summary.skipped.push({ ...base, reason: 'Skipped because unsupported item type.', suggested_fix: 'Use one of the supported item types shown in the AI Assisted Update page.' } as any); continue; }
+      if (!typeInfo) { summary.skipped.push({ ...base, reason: 'Skipped because unsupported item type.', suggested_fix: 'Use one of the supported item types shown in the AI Assisted Update page.' }); continue; }
       if (!typeInfo.importable) { summary.warnings.push({ ...base, reason: 'This item type is recognized but not importable yet.' }); summary.skipped.push({ ...base, reason: 'Recognized but not importable yet.' }); continue; }
       if (item.type === 'school_update') {
-        if (!school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}`, suggested_fix: 'Check the school name or include school_id.' } as any); continue; }
+        if (!school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}`, suggested_fix: 'Check the school name or include school_id.' }); continue; }
         const c = changesFor(item, school, schoolFields);
-        if (Object.keys(c.update).length) { const updated = await applyDb<DbRow>(db.from('schools').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', school.id).select('*').maybeSingle()); const failures = verifyFields(updated, c.changed); if (failures.length) { summary.failed.push({ ...base, record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' '), suggested_fix: 'Check database triggers, column names, and row-level permissions, then retry.' } as any); } else { const row={...base, record_id: school.id, school_record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, school.id); } } else summary.unchanged.push({ ...base, record_id: school.id, school_record_id: school.id, fields_skipped: c.skipped, reason: 'No school fields changed because supplied values were already present, blank, or intentionally preserved.' });
+        if (Object.keys(c.update).length) { const updated = await applyDb<DbRow>(db.from('schools').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', school.id).select('*').maybeSingle()); const failures = verifyFields(updated, c.changed); if (failures.length) { summary.failed.push({ ...base, record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' '), suggested_fix: 'Check database triggers, column names, and row-level permissions, then retry.' }); } else { const row={...base, record_id: school.id, school_record_id: school.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, school.id); } } else summary.unchanged.push({ ...base, record_id: school.id, school_record_id: school.id, fields_skipped: c.skipped, reason: 'No school fields changed because supplied values were already present, blank, or intentionally preserved.' });
       } else if (item.type === 'district_update') {
         if (!district) { summary.failed.push({ ...base, reason: `District not found: ${str(item.district_name) ?? 'missing district_name'}` }); continue; }
         const c = changesFor(item, district, districtFields);
-        if (Object.keys(c.update).length) { const updated = await applyDb<DbRow>(db.from('districts').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', district.id).select('*').maybeSingle()); const failures = verifyFields(updated, c.changed); if (failures.length) summary.failed.push({ ...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') } as any); else { const row={...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, district.id); } } else summary.unchanged.push({ ...base, record_id: district.id, fields_skipped: c.skipped, reason: 'No district fields changed because supplied values were already present, blank, or intentionally preserved.' });
+        if (Object.keys(c.update).length) { const updated = await applyDb<DbRow>(db.from('districts').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', district.id).select('*').maybeSingle()); const failures = verifyFields(updated, c.changed); if (failures.length) summary.failed.push({ ...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') }); else { const row={...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, district.id); } } else summary.unchanged.push({ ...base, record_id: district.id, fields_skipped: c.skipped, reason: 'No district fields changed because supplied values were already present, blank, or intentionally preserved.' });
       } else if (item.type === 'contact_create' || item.type === 'contact_update') {
         const title = str(item.title); if (!contactName && !title) { summary.failed.push({ ...base, reason: 'Contact needs at least name/contact_name or title.' }); continue; }
-        if (str(item.school_name) && !school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name)}`, suggested_fix: 'Check school_name or import the school before creating this contact.' } as any); continue; }
+        if (str(item.school_name) && !school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name)}`, suggested_fix: 'Check school_name or import the school before creating this contact.' }); continue; }
         const email = str(item.email), phone = str(item.phone), role = inferRole(title, str(item.role_category));
         const { data: candidates } = await db.from('contacts').select('*').eq('school_id', school?.id ?? '').ilike('name', contactName ?? '').ilike('title', title ?? '');
-        const existing = (candidates ?? []).find((c: any) => normalize(c.name) === normalize(contactName) && normalize(c.title) === normalize(title) && (!phone || !c.phone || normalize(c.phone) === normalize(phone)) && (!email || !c.email || normalize(c.email) === normalize(email))) as DbRow | undefined;
+        const existing = (candidates ?? []).find((c: DbRow) => normalize(c.name) === normalize(contactName) && normalize(c.title) === normalize(title) && (!phone || !c.phone || normalize(c.phone) === normalize(phone)) && (!email || !c.email || normalize(c.email) === normalize(email))) as DbRow | undefined;
         const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name: contactName, title, email, phone, role_category: role, program_area: role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: email ? (str(item.confidence) ?? 'medium') : 'low', extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
         if (existing && !item.overwrite) { summary.unchanged.push({ ...base, record_id: existing.id, school_record_id: school?.id, reason: 'Duplicate contact skipped because overwrite=false.', fields_skipped: [{ field:'contact', label:'Contact', to:[contactName,title,email,phone].filter(Boolean).join(' · ') }] }); if (school?.id) addId(summary, school.id); continue; }
-        if (existing) { const c = changesFor(payload as any, existing, Object.keys(payload)); if (Object.keys(c.update).length) { const data = await applyDb<DbRow>(db.from('contacts').update(c.update).eq('id', existing.id).select('*').single()); const failures = verifyFields(data, c.changed); if (failures.length) summary.failed.push({ ...base, record_id: existing.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') } as any); else { const row={...base, record_id:data?.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified contact after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, school?.id ?? data?.id); } } else { summary.unchanged.push({ ...base, record_id: existing.id, school_record_id: school?.id, reason: 'Duplicate contact already has the supplied fields.', fields_skipped: c.skipped }); if (school?.id) addId(summary, school.id); } }
-        else { const data = await applyDb<DbRow>(db.from('contacts').insert(payload).select('*').single()); const linkFailures = verifyFields(data, [{ field:'school_id', to: school?.id }]); if (school?.id && linkFailures.length) summary.failed.push({ ...base, record_id:data?.id, school_record_id: school.id, reason: linkFailures.join(' ') } as any); else { const row={...base, record_id:data?.id, school_record_id: school?.id, fields_changed:[{field:'contact',label:'Contact',to:[contactName,title,email || '(no email)',phone].filter(Boolean).join(' · ')},{field:'school_id',label:'Linked school',to:school?.name ?? school?.id}], message:'Verified contact was created and linked to the school.'}; summary.created.push(row); summary.applied.push(row); addId(summary, school?.id ?? data?.id); } }
+        if (existing) { const c = changesFor(payload, existing, Object.keys(payload)); if (Object.keys(c.update).length) { const data = await applyDb<DbRow>(db.from('contacts').update(c.update).eq('id', existing.id).select('*').single()); const failures = verifyFields(data, c.changed); if (failures.length) summary.failed.push({ ...base, record_id: existing.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') }); else { const row={...base, record_id:data?.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified contact after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, school?.id ?? data?.id); } } else { summary.unchanged.push({ ...base, record_id: existing.id, school_record_id: school?.id, reason: 'Duplicate contact already has the supplied fields.', fields_skipped: c.skipped }); if (school?.id) addId(summary, school.id); } }
+        else { const data = await applyDb<DbRow>(db.from('contacts').insert(payload).select('*').single()); const linkFailures = verifyFields(data, [{ field:'school_id', to: school?.id }]); if (school?.id && linkFailures.length) summary.failed.push({ ...base, record_id:data?.id, school_record_id: school.id, reason: linkFailures.join(' ') }); else { const row={...base, record_id:data?.id, school_record_id: school?.id, fields_changed:[{field:'contact',label:'Contact',to:[contactName,title,email || '(no email)',phone].filter(Boolean).join(' · ')},{field:'school_id',label:'Linked school',to:school?.name ?? school?.id}], message:'Verified contact was created and linked to the school.'}; summary.created.push(row); summary.applied.push(row); addId(summary, school?.id ?? data?.id); } }
       } else {
-        summary.skipped.push({ ...base, reason: `${item.type} is previewable but this importer does not yet have an apply handler.`, suggested_fix: 'Use a supported update/create handler or ask Aaron to add an apply handler for this item type.' } as any);
+        summary.skipped.push({ ...base, reason: `${item.type} is previewable but this importer does not yet have an apply handler.`, suggested_fix: 'Use a supported update/create handler or ask Aaron to add an apply handler for this item type.' });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       summary.failed.push({ ...base, ...dbReason(error), database_error: error });
     }
   }
