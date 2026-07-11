@@ -128,6 +128,7 @@ alter table schools add column if not exists program_notes text;
 alter table contacts add column if not exists source_notes text;
 alter table contacts add column if not exists imported_by_email text;
 alter table contacts add column if not exists imported_at timestamptz;
+alter table contacts add column if not exists updated_at timestamptz default now();
 alter table recruiting_notes add column if not exists source text;
 alter table recruiting_notes add column if not exists note_type text;
 alter table recruiting_notes add column if not exists source_url text;
@@ -181,6 +182,7 @@ alter table contacts add column if not exists role_category text;
 alter table contacts add column if not exists source_notes text;
 alter table contacts add column if not exists imported_by_email text;
 alter table contacts add column if not exists imported_at timestamptz;
+alter table contacts add column if not exists updated_at timestamptz default now();
 
 create table if not exists ai_update_runs (
   id uuid primary key default gen_random_uuid(),
@@ -209,6 +211,7 @@ alter table schools add column if not exists fax text;
 
 alter table contacts add column if not exists imported_by_email text;
 alter table contacts add column if not exists imported_at timestamptz;
+alter table contacts add column if not exists updated_at timestamptz default now();
 alter table contacts add column if not exists source_url text;
 alter table contacts add column if not exists source_notes text;
 alter table contacts add column if not exists role_category text;
