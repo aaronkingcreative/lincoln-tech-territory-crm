@@ -61,7 +61,7 @@ export default function DiscoverPage() {
   const last = status?.lastRun;
   const duplicates = status?.queue?.duplicateTargets ?? [];
 
-  return <main className="mx-auto max-w-6xl space-y-6 p-6">
+  return <main className="mx-auto max-w-6xl space-y-6 p-6"><div className="rounded-xl border border-amber-700 bg-amber-950/40 p-4 text-amber-100">This workflow is deprecated. Use AI Assisted Update instead.</div>
     <div><p className="text-sm uppercase tracking-[.25em] text-sky-300">Human-guided crawl workflow</p><h1 className="mt-2 text-3xl font-bold">Discover schools, websites, and contacts <HelpIcon topic="How to use Discovery" /></h1><p className="mt-2 text-slate-400">Use these controls in order. Status cards read live crawl_queue and discovery_runs data and include duplicate/contact-debug visibility.</p></div>
 
     <section className="rounded-2xl border border-sky-900/60 bg-slate-900 p-6"><h2 className="text-xl font-semibold">Step guidance</h2><ol className="mt-3 list-decimal space-y-2 pl-5 text-slate-300"><li>Run Discover Schools and Districts.</li><li>Run Discover School Websites.</li><li>Run Discover Contacts.</li><li>Run Crawl Batch until pending is 0 or progress stalls.</li></ol><p className="mt-3 text-sm text-amber-100">Stop before more batches if pending grows unexpectedly or duplicate targets appear below.</p></section>

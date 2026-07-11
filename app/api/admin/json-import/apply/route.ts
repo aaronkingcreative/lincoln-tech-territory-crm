@@ -16,7 +16,7 @@ type Verification = {
   failed: { target: string; record_id?: string; failures: string[] }[];
 };
 
-const schoolFields = ['phone','website','address','city','state','zip','fax','special_programs','program_notes','source_url','source_notes','school_type','territory_status'] as const;
+const schoolFields = ['phone','website','address','city','state','zip','fax','source_url','source_notes','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','school_type','territory_status'] as const;
 const districtFields = ['phone','website','office_address','city','state','zip','superintendent','cte_director','source_url'] as const;
 const result = (): ImportResultGroups & { status?: string; run_id?: string; verification: Verification } => ({ applied: [], updated: [], created: [], skipped: [], unchanged: [], failed: [], warnings: [], affected_record_ids: [], verification: { schools_verified: [], contacts_verified: [], failed: [] } });
 const present = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
@@ -56,6 +56,19 @@ async function findDistrict(db: ReturnType<typeof createServiceClient>, item: Js
   const name = str(item.district_name); if (name) return (await db.from('districts').select('*').ilike('name', name).maybeSingle()).data as DbRow | null;
   return null;
 }
+
+function confidenceScore(item: JsonImportItem) {
+  const raw = item.confidence_score ?? item.confidence;
+  if (typeof raw === 'string') {
+    const value = raw.trim().toLowerCase();
+    if (value === 'high' || value === 'medium' || value === 'low') return value;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric >= 0.75 ? 'high' : numeric >= 0.4 ? 'medium' : 'low';
+  }
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw >= 0.75 ? 'high' : raw >= 0.4 ? 'medium' : 'low';
+  return str(item.source_url) || str(item.source_notes) ? 'medium' : 'low';
+}
+
 function inferRole(title?: string, requested?: string) {
   if (requested && roleCategories.some(category => category === requested)) return requested;
   const t = title?.toLowerCase() ?? '';
@@ -73,7 +86,7 @@ async function applyDb<T>(promise: PromiseLike<{ data: T | null; error: unknown 
 
 async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Promise<{ ok: true } | { ok: false; table: string; reason: string }> {
   const checks = [
-    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','source_url','source_notes','updated_at','city','state','zip','fax','school_type','territory_status'] },
+    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status'] },
     { table: 'contacts', columns: ['school_id','district_id','name','title','email','phone','role_category','source_url','source_notes','imported_by_email','imported_at','updated_at','program_area','confidence_score','extraction_notes'] },
     { table: 'ai_update_runs', columns: ['id','imported_by_email','status','started_at','finished_at','item_count','created_count','updated_count','skipped_count','failed_count','input_hash','original_payload','normalized_payload','result_summary','affected_record_ids'] },
   ];
@@ -124,7 +137,7 @@ export async function POST(request: NextRequest) {
         if (!school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}`, suggested_fix: 'Check the school name or include school_id.' }); continue; }
         const c = changesFor(item, school, schoolFields);
         if (Object.keys(c.update).length) {
-          const updateObject = { ...c.update, updated_at: new Date().toISOString() };
+          const updateObject = { ...c.update, updated_at: new Date().toISOString(), last_ai_update_at: new Date().toISOString(), last_ai_update_run_id: summary.run_id };
           log(summary.run_id, 'write_school', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, update_object: updateObject });
           const updateResponse = await db.from('schools').update(updateObject).eq('id', school.id).select('*').maybeSingle();
           log(summary.run_id, 'write_school_response', { item_index: index, item_type: item.type, school_name: school.name, matched_school_id: school.id, supabase_error: updateResponse.error, returned_updated_row: updateResponse.data });
@@ -147,10 +160,9 @@ export async function POST(request: NextRequest) {
         const email = str(item.email), phone = str(item.phone), role = inferRole(title, str(item.role_category));
         const { data: candidates } = await db.from('contacts').select('*').eq('school_id', school?.id ?? '').ilike('name', contactName ?? '').ilike('title', title ?? '');
         const existing = ((candidates ?? []) as DbRow[]).find(c => normalize(str(c.name)) === normalize(contactName) && normalize(str(c.title)) === normalize(title));
-        const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name: contactName, title, email, phone, role_category: role, program_area: role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: email ? 0.75 : 0.45, extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
-        if (existing && !item.overwrite) { summary.skipped.push({ ...base, record_id: existing.id, school_record_id: school?.id, reason: 'Duplicate contact skipped because overwrite=false.', fields_skipped: [{ field:'contact', label:'Contact', to:[contactName,title,email,phone].filter(Boolean).join(' · ') }] }); if (school?.id) addId(summary, school.id); continue; }
+        const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name: contactName, title, email, phone, role_category: role, program_area: role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: confidenceScore(item), extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
         if (existing) {
-          const c = changesFor(payload, existing, Object.keys(payload));
+          const c = changesFor({ ...payload, overwrite: true }, existing, Object.keys(payload));
           if (Object.keys(c.update).length) { await applyDb<DbRow>(db.from('contacts').update(c.update).eq('id', existing.id).select('id').single()); const reread = await applyDb<DbRow>(db.from('contacts').select('*').eq('id', existing.id).single()); const failures = verifyFields(reread, c.changed); if (failures.length) { summary.verification.failed.push({ target: contactName ?? title ?? 'contact', record_id: existing.id, failures }); summary.failed.push({ ...base, record_id: existing.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') }); } else { const row={...base, record_id:existing.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified contact after update.'}; summary.updated.push(row); summary.applied.push(row); summary.verification.contacts_verified.push({ contact: contactName ?? title ?? 'contact', school: school?.name, record_id: existing.id }); addId(summary, school?.id ?? existing.id); } }
           else { summary.unchanged.push({ ...base, record_id: existing.id, school_record_id: school?.id, reason: 'Duplicate contact already has the supplied fields.', fields_skipped: c.skipped }); if (school?.id) addId(summary, school.id); }
         } else {
