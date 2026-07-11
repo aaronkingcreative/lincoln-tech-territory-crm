@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/admin-auth';
@@ -14,6 +16,7 @@ const empty = (): ImportResultGroups => ({ applied: [], updated: [], created: []
 async function find(db: ReturnType<typeof createServiceClient>, table: 'schools'|'districts', id?: unknown, name?: unknown) { const sid=str(id); if(sid) return (await db.from(table).select('*').eq('id',sid).maybeSingle()).data as any; const n=str(name); if(n) return (await db.from(table).select('*').ilike('name',n).maybeSingle()).data as any; return null; }
 function previewFields(item: JsonImportItem, existing: any, fields: string[]) { return fields.flatMap(field => { const incoming = field === 'office_address' ? (item.office_address ?? item.address) : item[field]; if(!present(incoming)) return []; const cur=existing?.[field]; return [{ field, label: fieldLabels[field] ?? field.replaceAll('_',' '), from: present(cur) ? cur : 'Missing', to: incoming, reason: !item.overwrite && present(cur) && String(cur)!==String(incoming) ? 'Existing value will be preserved unless empty.' : undefined }]; }); }
 function countTypes(items: JsonImportItem[]) { return items.reduce<Record<string, number>>((a, i) => ({ ...a, [i.type]: (a[i.type] ?? 0) + 1 }), {}); }
+function hashItems(items: JsonImportItem[]) { return createHash('sha256').update(JSON.stringify({ items })).digest('hex'); }
 
 export async function POST(request: NextRequest) {
   const admin = await requireAdmin(request); if ('error' in admin) return NextResponse.json({ error: admin.error }, { status: admin.status });
@@ -34,7 +37,13 @@ export async function POST(request: NextRequest) {
       else if (item.type === 'task_create') summary.created.push({ ...base, fields_changed: [{ field:'title', label:'Title', to:item.title }, { field:'priority', label:'Priority', to:item.priority }, { field:'status', label:'Status', to:item.status }, { field:'description', label:'Description', to:item.description }] });
       else summary.created.push({ ...base, message: `${info.label} will be imported if valid.` });
     }
-    const response = { valid: summary.failed.length === 0, supported_item_types: supportedItemTypes, summary: { count: items.length, types: countTypes(items), preview: items }, ...summary };
+    const inputHash = hashItems(items);
+    let previousRun: any = null;
+    try {
+      previousRun = (await db.from('ai_update_runs').select('id,status,finished_at,result_summary').eq('input_hash', inputHash).neq('status', 'running').order('finished_at', { ascending: false }).limit(1).maybeSingle()).data;
+    } catch { /* Duplicate detection is helpful but must not block validation. */ }
+    if (previousRun?.id) summary.warnings.push({ type: 'duplicate_import', target_name: 'Exact update payload', reason: 'This exact update was already imported. You can review the previous run or commit again anyway if retrying intentionally.', message: `Previous run ${previousRun.id} finished with status ${previousRun.status ?? 'unknown'}.` });
+    const response = { valid: summary.failed.length === 0, already_imported: !!previousRun?.id, previous_import_run: previousRun ?? null, input_hash: inputHash, supported_item_types: supportedItemTypes, summary: { count: items.length, types: countTypes(items), preview: items }, ...summary };
     const { data } = await db.from('json_imports').insert({ imported_by_email: admin.email, import_type: 'manual_json_import', raw_json: raw, summary: response, status: response.valid ? 'validated' : 'failed' }).select('id').single();
     return NextResponse.json({ ...response, import_id: data?.id });
   } catch (error) {
