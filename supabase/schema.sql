@@ -216,20 +216,51 @@ alter table contacts add column if not exists source_url text;
 alter table contacts add column if not exists source_notes text;
 alter table contacts add column if not exists role_category text;
 alter table contacts add column if not exists program_area text;
-alter table contacts add column if not exists confidence_score numeric;
+alter table contacts add column if not exists confidence_score text;
 alter table contacts add column if not exists extraction_notes text;
 
--- Existing environments may have legacy text confidence values. Preserve meaning while
--- making the schema match importer writes and verification expectations.
+-- Production constraint expects text confidence values. Preserve existing numeric
+-- values by mapping them into high/medium/low before restoring the check.
 alter table contacts drop constraint if exists contacts_confidence_score_check;
 alter table contacts
-  alter column confidence_score type numeric
+  alter column confidence_score type text
   using case
     when confidence_score is null then null
-    when lower(confidence_score::text) = 'high' then 0.9
-    when lower(confidence_score::text) = 'medium' then 0.7
-    when lower(confidence_score::text) in ('low','manual_low') then 0.4
-    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' then confidence_score::numeric
+    when lower(confidence_score::text) in ('high','medium','low') then lower(confidence_score::text)
+    when lower(confidence_score::text) = 'manual_low' then 'low'
+    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' and confidence_score::numeric >= 0.75 then 'high'
+    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' and confidence_score::numeric >= 0.4 then 'medium'
+    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' then 'low'
     else null
   end;
-alter table contacts add constraint contacts_confidence_score_check check (confidence_score is null or (confidence_score >= 0 and confidence_score <= 1));
+alter table contacts add constraint contacts_confidence_score_check check (confidence_score is null or confidence_score in ('high','medium','low'));
+
+-- Recruiting data progress fields for AI Assisted Update. Safe additive columns.
+alter table schools add column if not exists bell_schedule text;
+alter table schools add column if not exists bell_schedule_url text;
+alter table schools add column if not exists student_population_total integer;
+alter table schools add column if not exists grade_enrollment jsonb default '{}'::jsonb;
+alter table schools add column if not exists enrollment_source_url text;
+alter table schools add column if not exists enrollment_notes text;
+alter table schools add column if not exists cte_programs text;
+alter table schools add column if not exists shop_programs text;
+alter table schools add column if not exists trades_programs text;
+alter table schools add column if not exists career_programs text;
+alter table schools add column if not exists school_profile_notes text;
+alter table schools add column if not exists last_ai_update_at timestamptz;
+alter table schools add column if not exists last_ai_update_run_id uuid null;
+
+-- AI Assisted Update writes text confidence values to match production.
+alter table contacts drop constraint if exists contacts_confidence_score_check;
+alter table contacts
+  alter column confidence_score type text
+  using case
+    when confidence_score is null then null
+    when lower(confidence_score::text) in ('high','medium','low') then lower(confidence_score::text)
+    when lower(confidence_score::text) = 'manual_low' then 'low'
+    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' and confidence_score::numeric >= 0.75 then 'high'
+    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' and confidence_score::numeric >= 0.4 then 'medium'
+    when confidence_score::text ~ '^[0-9]+(\.[0-9]+)?$' then 'low'
+    else null
+  end;
+alter table contacts add constraint contacts_confidence_score_check check (confidence_score is null or confidence_score in ('high','medium','low'));

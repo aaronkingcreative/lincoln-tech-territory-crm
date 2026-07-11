@@ -11,7 +11,7 @@ type ImportResult = {
     districts?: CountSummary;
     schools?: CountSummary & { missingRequiredData?: number };
     errors?: string[];
-    byCounty?: Record<string, { schoolsInserted?: number; schoolsUpdated?: number; schoolsSkipped?: number; districtsInserted?: number; districtsUpdated?: number; districtsSkipped?: number }>;
+    byCounty?: Record<string, { schoolsInserted?: number; schoolsUpdated?: number; schoolsSkipped?: number; districtsInserted?: number; districtsUpdated?: number; districtsSkipped?: number }>
   };
 };
 
@@ -47,7 +47,7 @@ export default function ImportSchoolsPage() {
     : false;
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 p-6">
+    <main className="mx-auto max-w-4xl space-y-6 p-6"><div className="rounded-xl border border-amber-700 bg-amber-950/40 p-4 text-amber-100">This workflow is deprecated. Use AI Assisted Update instead.</div>
       <div>
         <p className="text-sm uppercase tracking-[.25em] text-sky-300">Admin workflow</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-100">Run a School Import <HelpIcon topic="What does Run a School Import do?"/></h1>
