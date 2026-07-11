@@ -166,3 +166,11 @@ from (
 ) grouped
 group by target_type, target_url
 having sum(status_count) > 1;
+
+-- AI assisted import additive columns. Safe to rerun; no destructive schema changes.
+alter table contacts add column if not exists role_category text;
+alter table contacts add column if not exists source_notes text;
+alter table contacts add column if not exists imported_by_email text;
+alter table contacts add column if not exists imported_at timestamptz;
+alter table schools add column if not exists special_programs text;
+alter table schools add column if not exists program_notes text;

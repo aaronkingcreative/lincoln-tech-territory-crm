@@ -17,6 +17,8 @@ export type ImportResultItem = {
   fields_changed?: ImportFieldChange[];
   fields_skipped?: ImportFieldChange[];
   reason?: string;
+  database_error?: unknown;
+  suggested_fix?: string;
   message?: string;
 };
 export type ImportResultGroups = {
