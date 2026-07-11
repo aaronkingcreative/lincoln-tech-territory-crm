@@ -106,6 +106,9 @@ export async function POST(request: NextRequest) {
   const originalPayload = raw;
   const normalizedPayload = { items };
   const inputHash = createHash('sha256').update(JSON.stringify(normalizedPayload)).digest('hex');
+  const commitMode = request.headers.get('x-ai-update-commit-mode') ?? 'commit';
+  const contactCreateCount = items.filter(item => item.type === 'contact_create').length;
+  log(summary.run_id, 'request_received', { commit_mode: commitMode, input_hash: inputHash, retry_mode: commitMode.includes('retry'), item_count_sent_to_apply: items.length, contact_create_count_sent_to_apply: contactCreateCount });
 
   const schemaCheck = await verifyApplySchema(db);
   if (!schemaCheck.ok) {
@@ -123,7 +126,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ...summary, ok: false, status: 'failed', failed: [{ type: 'ai_update_runs', reason, suggested_fix: 'Check ai_update_runs schema and service-role write permissions before retrying.' }] }, { status: 500 });
   }
   summary.run_id = str(run.id);
-  log(summary.run_id, 'started', { item_count: items.length, uses_service_role_client: true });
+  log(summary.run_id, 'started', { commit_mode: commitMode, input_hash: inputHash, retry_mode: commitMode.includes('retry'), item_count: items.length, contact_create_count: contactCreateCount, uses_service_role_client: true, new_run_id: summary.run_id });
 
   for (const [index, item] of items.entries()) {
     const school = await findSchool(db, item); const district = await findDistrict(db, item, school); const contactName = str(item.contact_name) ?? str(item.name);
@@ -161,12 +164,13 @@ export async function POST(request: NextRequest) {
         const { data: candidates } = await db.from('contacts').select('*').eq('school_id', school?.id ?? '').ilike('name', contactName ?? '').ilike('title', title ?? '');
         const existing = ((candidates ?? []) as DbRow[]).find(c => normalize(str(c.name)) === normalize(contactName) && normalize(str(c.title)) === normalize(title));
         const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name: contactName, title, email, phone, role_category: role, program_area: role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: confidenceScore(item), extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
+        log(summary.run_id, 'contact_payload_normalized', { item_index: index, contact: contactName, raw_confidence_score: item.confidence_score, raw_confidence: item.confidence, confidence_score: payload.confidence_score });
         if (existing) {
           const c = changesFor({ ...payload, overwrite: true }, existing, Object.keys(payload));
           if (Object.keys(c.update).length) { await applyDb<DbRow>(db.from('contacts').update(c.update).eq('id', existing.id).select('id').single()); const reread = await applyDb<DbRow>(db.from('contacts').select('*').eq('id', existing.id).single()); const failures = verifyFields(reread, c.changed); if (failures.length) { summary.verification.failed.push({ target: contactName ?? title ?? 'contact', record_id: existing.id, failures }); summary.failed.push({ ...base, record_id: existing.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') }); } else { const row={...base, record_id:existing.id, school_record_id: school?.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified contact after update.'}; summary.updated.push(row); summary.applied.push(row); summary.verification.contacts_verified.push({ contact: contactName ?? title ?? 'contact', school: school?.name, record_id: existing.id }); addId(summary, school?.id ?? existing.id); } }
           else { summary.unchanged.push({ ...base, record_id: existing.id, school_record_id: school?.id, reason: 'Duplicate contact already has the supplied fields.', fields_skipped: c.skipped }); if (school?.id) addId(summary, school.id); }
         } else {
-          log(summary.run_id, 'insert_contact', { school_id: school?.id, contact: contactName, title });
+          log(summary.run_id, 'insert_contact', { school_id: school?.id, contact: contactName, title, confidence_score: payload.confidence_score });
           const data = await applyDb<DbRow>(db.from('contacts').insert(payload).select('*').single());
           if (!data?.id) {
             summary.failed.push({ ...base, school_record_id: school?.id, reason: 'Contact insert/update did not return a record id.', suggested_fix: 'Check Supabase insert/select permissions and contacts table schema.' });
@@ -182,7 +186,20 @@ export async function POST(request: NextRequest) {
         if (!district) { summary.failed.push({ ...base, reason: `District not found: ${str(item.district_name) ?? 'missing district_name'}` }); continue; }
         const c = changesFor(item, district, districtFields); if (Object.keys(c.update).length) { const updated = await applyDb<DbRow>(db.from('districts').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', district.id).select('*').maybeSingle()); const failures = verifyFields(updated, c.changed); if (failures.length) summary.failed.push({ ...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') }); else { const row={...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, district.id); } } else summary.unchanged.push({ ...base, record_id: district.id, fields_skipped: c.skipped, reason: 'No district fields changed because supplied values were already present, blank, or intentionally preserved.' });
       } else summary.skipped.push({ ...base, reason: `${item.type} is previewable but this importer does not yet have an apply handler.`, suggested_fix: 'Use a supported update/create handler or ask Aaron to add an apply handler for this item type.' });
-    } catch (error: unknown) { log(summary.run_id, 'error', { item_index: index, item_type: item.type, error: dbReason(error).reason }); summary.failed.push({ ...base, ...dbReason(error), database_error: dbReason(error).database_error ?? { message: error instanceof Error ? error.message : String(error) } }); }
+    } catch (error: unknown) {
+      const reason = dbReason(error);
+      const rawMessage = String((error as { message?: unknown })?.message ?? reason.reason);
+      const receivedConfidence = item.confidence_score ?? item.confidence;
+      const contactConfidenceFailure = item.type.startsWith('contact') && /contacts_confidence_score_check|confidence_score/i.test(rawMessage);
+      log(summary.run_id, 'error', { item_index: index, item_type: item.type, error: reason.reason });
+      summary.failed.push({
+        ...base,
+        ...reason,
+        reason: contactConfidenceFailure ? `Contact import failed: ${contactName ?? base.target_name ?? 'Contact'} failed because confidence_score was invalid. Expected: high, medium, or low. Received: ${String(receivedConfidence ?? 'blank')}.` : reason.reason,
+        suggested_fix: contactConfidenceFailure ? 'Use confidence_score high, medium, or low; numeric confidence values are normalized before insert and should not be written to public.contacts.' : reason.suggested_fix,
+        database_error: reason.database_error ?? { message: error instanceof Error ? error.message : String(error) },
+      });
+    }
   }
   summary.ok = summary.failed.length === 0;
   summary.status = summary.failed.length ? (summary.applied.length || summary.created.length || summary.updated.length ? 'partial_success' : 'failed') : 'success';
@@ -198,6 +215,6 @@ export async function POST(request: NextRequest) {
   try { await db.from('json_imports').insert({ imported_by_email: admin.email, import_type: 'manual_json_import', raw_json: raw, summary, status: summary.ok ? 'imported' : 'failed' }); } catch { /* legacy audit best effort */ }
   for (const path of ['/schools','/contacts','/coverage','/export','/admin/json-import']) revalidatePath(path);
   for (const id of summary.affected_record_ids ?? []) revalidatePath(`/schools/${id}`);
-  log(summary.run_id, 'finished', { status: summary.status, ...counts });
+  log(summary.run_id, 'finished', { status: summary.status, new_run_id: summary.run_id, created_contacts_count: summary.created.filter(item => String(item.type).startsWith('contact')).length, failed_contacts_count: summary.failed.filter(item => String(item.type).startsWith('contact')).length, ...counts });
   return NextResponse.json(summary, { status: summary.status === 'failed' ? 422 : 200 });
 }
