@@ -141,3 +141,18 @@ ADMIN_EMAILS=kenking@northrim.net,aking81@gmail.com
 4. Use the CSV importer only as a fallback for known seed rows.
 5. Leave unknown values blank. Never hallucinate contacts, schools, teacher names, phone numbers, or emails.
 6. Confirm the dashboard counts, Schools table, Districts table, Contacts table, Map markers for rows with coordinates, and XLSX export after each refresh.
+
+## Build safety
+
+Before any PR is considered ready, run:
+
+```bash
+npm ci
+npm run build
+```
+
+Do not rely on Vercel as the first successful build check.
+
+If build cannot run, the task is not ready.
+
+AI Assisted Update importer changes must be type-safe and must not use `as any`, non-null assertions, or disabled TypeScript checks to hide real nullable state.

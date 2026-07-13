@@ -10,7 +10,9 @@
     "seed:schools": "tsx scripts/seed-schools.ts",
     "crawl:schools": "tsx scripts/crawl-schools.ts",
     "crawl:contacts": "tsx scripts/crawl-contacts.ts",
-    "export:xlsx": "tsx scripts/export-xlsx.ts"
+    "export:xlsx": "tsx scripts/export-xlsx.ts",
+    "verify": "npm run build",
+    "verify:clean": "npm ci && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.48.1",
