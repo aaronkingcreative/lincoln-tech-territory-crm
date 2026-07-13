@@ -4,8 +4,13 @@ import { createServiceClient, hasSupabaseServiceCredentials } from './supabase';
 export type DbRow = Record<string, any>;
 const norm = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/&/g, ' and ').replace(/\b(sr|senior)\b/g, '').replace(/\bhigh school\b/g, 'high').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 export const hasValue = (v: unknown) => v !== undefined && v !== null && String(v).trim().length > 0 && String(v).trim() !== '{}';
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+export function hasMeaningfulGradeEnrollment(v: unknown) {
+  if (!isRecord(v)) return false;
+  return Object.values(v).some((value) => hasValue(value));
+}
 const role = (c: DbRow, words: string[]) => words.some((w) => norm(`${c.title} ${c.role_category} ${c.program_area} ${c.extraction_notes}`).includes(norm(w)));
-const cteWords = ['cte','career technical','shop','automotive','welding','diesel','construction','agriculture','industrial','technical','manufacturing'];
+const cteWords = ['cte','career','college and career','career technical','trades','trade','shop','automotive','welding','agriculture','ag','technical','workforce','counselor','diesel','construction','industrial','manufacturing'];
 const schoolKey = (name: unknown, county: unknown, state: unknown) => `${norm(name)}|${norm(county)}|${norm(state)}`;
 const districtKey = (name: unknown, county: unknown, state: unknown) => `${norm(name)}|${norm(county)}|${norm(state)}`;
 const urlKey = (value: unknown) => { try { const url = new URL(String(value ?? '')); url.hash = ''; url.hostname = url.hostname.toLowerCase().replace(/^www\./, ''); url.pathname = url.pathname.replace(/\/+$/,'').replace(/\/index\.(html?|php)$/i, '') || '/'; return url.toString(); } catch { return String(value ?? '').trim(); } };
@@ -23,7 +28,7 @@ export async function getTerritoryData() {
 }
 
 export function contactsForSchool(contacts: DbRow[], schoolId: string) { return contacts.filter((c) => c.school_id === schoolId); }
-export function schoolFlags(s: DbRow | undefined, contacts: DbRow[]) { const cs = s?.id ? contactsForSchool(contacts, s.id) : []; const principal = cs.some((c) => role(c, ['principal'])); const counselor = cs.some((c) => role(c, ['counselor','career counselor','career_counselor','counseling','college career'])); const cte = hasValue(s?.special_programs) || hasValue(s?.program_notes) || hasValue(s?.cte_programs) || hasValue(s?.shop_programs) || hasValue(s?.trades_programs) || hasValue(s?.career_programs) || cs.some((c) => role(c, cteWords)); const contact = principal || counselor || cs.length > 0; const grade = hasValue(s?.grade_enrollment); return { exists: !!s, address: hasValue(s?.address), phone: hasValue(s?.phone), website: hasValue(s?.website), source: hasValue(s?.source_url), contacts: cs.length > 0, principal, counselor, cte, bell_schedule: hasValue(s?.bell_schedule), student_population: hasValue(s?.student_population_total) || hasValue(s?.enrollment), grade_enrollment: grade, ready: hasValue(s?.phone) && hasValue(s?.website) && hasValue(s?.address) && (contact || cte), updated_recently: !!s?.last_ai_update_at && Date.now() - new Date(s.last_ai_update_at).getTime() < 1000*60*60*24*14 }; }
+export function schoolFlags(s: DbRow | undefined, contacts: DbRow[]) { const schoolId = typeof s?.id === 'string' ? s.id : ''; const cs = schoolId ? contactsForSchool(contacts, schoolId) : []; const principal = cs.some((c) => role(c, ['principal'])); const counselor = cs.some((c) => role(c, ['counselor','career counselor','career_counselor','counseling','college career','college and career'])); const cte = hasValue(s?.special_programs) || hasValue(s?.program_notes) || hasValue(s?.cte_programs) || hasValue(s?.shop_programs) || hasValue(s?.trades_programs) || hasValue(s?.career_programs) || hasValue(s?.school_profile_notes) || cs.some((c) => role(c, cteWords)); const contact = principal || counselor || cs.length > 0; const enrollmentClue = hasValue(s?.student_population_total) || hasValue(s?.enrollment) || hasMeaningfulGradeEnrollment(s?.grade_enrollment); const lastAiUpdateAt = typeof s?.last_ai_update_at === 'string' ? s.last_ai_update_at : ''; return { exists: !!s, address: hasValue(s?.address), phone: hasValue(s?.phone), website: hasValue(s?.website), source: hasValue(s?.source_url), contacts: cs.length > 0, principal, counselor, cte, bell_schedule: hasValue(s?.bell_schedule) || hasValue(s?.bell_schedule_url), student_population: hasValue(s?.student_population_total) || hasValue(s?.enrollment), grade_enrollment: hasMeaningfulGradeEnrollment(s?.grade_enrollment), ready: hasValue(s?.phone) && (hasValue(s?.website) || hasValue(s?.address)) && (contact || cte || enrollmentClue || hasValue(s?.school_profile_notes) || hasValue(s?.program_notes)), needs_verification: s?.needs_verification === true || s?.verification_status === 'needs_verification' || (hasValue(s?.ai_created_at) && s?.verification_status !== 'complete' && s?.verification_status !== 'verified'), updated_recently: !!lastAiUpdateAt && Date.now() - new Date(lastAiUpdateAt).getTime() < 1000*60*60*24*14 }; }
 export function missingItems(s: DbRow, contacts: DbRow[]) { const f = schoolFlags(s, contacts); const out: string[] = []; if (!f.phone) out.push('phone'); if (!f.website) out.push('website'); if (!f.address) out.push('address'); if (!f.principal) out.push('principal'); if (!f.counselor) out.push('counselor'); if (!f.cte) out.push('CTE/shop info'); if (!f.bell_schedule) out.push('bell schedule'); if (!f.student_population) out.push('student population'); if (!f.grade_enrollment) out.push('grade enrollment'); return out; }
 type SchoolFlags = ReturnType<typeof schoolFlags>;
 type SchoolFlagKey = keyof SchoolFlags;
@@ -33,11 +38,12 @@ const progressDefinitions: Array<{ label: string; key: SchoolFlagKey; help: stri
   { label: 'Schools with street address', key: 'address', help: 'schools.address exists' },
   { label: 'Schools with principal/contact info', key: 'principal', help: 'Linked contact title or role contains principal' },
   { label: 'Schools with counselor/contact info', key: 'counselor', help: 'Linked contact title or role contains counselor or career counselor' },
-  { label: 'Schools with CTE/shop/program info', key: 'cte', help: 'Program fields or CTE/shop/trades contact exists' },
-  { label: 'Schools with bell schedule', key: 'bell_schedule', help: 'schools.bell_schedule exists' },
+  { label: 'Schools with CTE/shop/program info', key: 'cte', help: 'Program/profile fields or linked CTE, trades, counselor, workforce, or career contact exists' },
+  { label: 'Schools with bell schedule', key: 'bell_schedule', help: 'schools.bell_schedule or schools.bell_schedule_url exists' },
   { label: 'Schools with student population data', key: 'student_population', help: 'schools.student_population_total exists' },
-  { label: 'Schools with grade-level enrollment breakdown', key: 'grade_enrollment', help: 'schools.grade_enrollment exists' },
-  { label: 'Schools ready for recruiter outreach', key: 'ready', help: 'Phone, website, address, and a useful contact or program note' },
+  { label: 'Schools with grade-level enrollment breakdown', key: 'grade_enrollment', help: 'schools.grade_enrollment has grade-level values' },
+  { label: 'Schools ready for recruiter outreach', key: 'ready', help: 'Phone plus website/address plus a useful contact, program note, or enrollment clue' },
+  { label: 'Schools needing verification', key: 'needs_verification', help: 'needs_verification, verification_status, or AI-created records not marked complete' },
 ];
 export function recruitingProgress(schools: DbRow[], contacts: DbRow[]) { const total = schools.length || 1; const count = (key: SchoolFlagKey) => schools.filter((s) => Boolean(schoolFlags(s, contacts)[key])).length; return { total, cards: progressDefinitions.map(({ label, key, help }): [string, number, number, string] => [label, count(key), total, help]) }; }
 
