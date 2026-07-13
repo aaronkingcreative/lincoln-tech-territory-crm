@@ -7,8 +7,9 @@ function Card({children}:{children:React.ReactNode}){return <section className="
 function Progress({label,value,max,explain}:{label:string;value:number;max:number;explain:string}){return <div><div className="mb-1 flex flex-wrap justify-between gap-2 text-sm"><b>{label}</b><span className="text-sky-200">{pct(value,max)}% · {value} / {max}</span></div><div className="h-3 rounded-full bg-slate-800"><div className="h-3 rounded-full bg-gradient-to-r from-blue-900 via-sky-500 to-sky-300" style={{width:`${pct(value,max)}%`}} /></div><p className="mt-1 text-xs text-slate-400">{explain}</p></div>}
 const todayKey = () => new Date().toISOString().slice(0,10);
 const dateKey = (v: unknown) => typeof v === 'string' && v.length >= 10 ? v.slice(0,10) : '';
-const asRecord = (v: unknown): Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v) ? v : {};
-const asArray = (v: unknown): Record<string, unknown>[] => Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x)) : [];
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const asRecord = (v: unknown): Record<string, unknown> => isRecord(v) ? v : {};
+const asArray = (v: unknown): Record<string, unknown>[] => Array.isArray(v) ? v.filter(isRecord) : [];
 const itemName = (x: Record<string, unknown>) => String(x.target_name ?? x.school_name ?? x.name ?? 'Unnamed item');
 const itemReason = (x: Record<string, unknown>) => String(x.reason ?? x.error ?? 'No reason recorded');
 function RunNames({title,items}:{title:string;items:Record<string, unknown>[]}){return items.length ? <div className="mt-3"><h3 className="text-sm font-semibold text-slate-200">{title}</h3><ul className="mt-1 list-disc pl-5 text-sm text-slate-300">{items.slice(0,5).map((x,i)=><li key={`${title}-${i}`}>{itemName(x)}{title.includes('Failed') ? ` — ${itemReason(x)}` : ''}</li>)}</ul></div> : null}
