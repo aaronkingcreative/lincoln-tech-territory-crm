@@ -2,9 +2,25 @@ import { readFileSync } from 'fs';
 import { normalizeImport } from '../lib/json-import';
 import { requiredSchoolCreateMissing, schoolCreatePayload } from '../lib/school-create';
 import { readImportApiResponse } from '../lib/json-import-client';
+import { resolveSchoolMatchFromCandidates } from '../lib/school-matching';
+import { DbRow } from '../lib/coverage';
 
 function assert(condition: unknown, message: string) {
   if (!condition) throw new Error(message);
+}
+
+
+function school(name: string, extra: Partial<DbRow> & { districts?: { name?: string } } = {}): DbRow & { districts?: { name?: string } } {
+  return { id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), name, ...extra };
+}
+
+function assertMatchedAlias(incoming: string, existing: string, item: Record<string, unknown>) {
+  const result = resolveSchoolMatchFromCandidates({ type: 'school_update', school_name: incoming, ...item }, [school(existing, item)]);
+  assert(result.status === 'matched', `${incoming} should match ${existing}.`);
+  if (result.status === 'matched') {
+    assert(result.match.matchedName === existing, `${incoming} should target existing CRM row ${existing}.`);
+    assert(result.match.warnings.some(warning => warning.includes('Alias matched')), `${incoming} should produce an alias warning.`);
+  }
 }
 
 async function main() {
@@ -20,6 +36,25 @@ async function main() {
     assert(payload[field] !== undefined, `Create payload should include ${field}.`);
   }
   assert(payload.verification_status === 'unverified', 'Create payload should mark the school unverified by default.');
+
+
+  assertMatchedAlias('Notus High School', 'Notus Jr/Sr High School', { district_name: 'Notus School District', city: 'Notus', state: 'ID', districts: { name: 'Notus School District' } });
+  assertMatchedAlias('Wilder High School', 'Wilder Jr/Sr High School', { district_name: 'Wilder School District', city: 'Wilder', state: 'ID', districts: { name: 'Wilder School District' } });
+  assertMatchedAlias('Rockland High School', 'Rockland Public School', { city: 'Rockland', state: 'ID' });
+  assertMatchedAlias('Richard McKenna Charter School', 'Richard McKenna Charter High School', { city: 'Mountain Home', state: 'ID' });
+  assertMatchedAlias('Nampa High School', 'Nampa Senior High School', { city: 'Nampa', state: 'ID' });
+  assertMatchedAlias('Shelley High School', 'Shelley Senior High School', { city: 'Shelley', state: 'ID' });
+  assertMatchedAlias('Clark County High School', 'Clark County Jr/Sr High School', { district_name: 'Clark County School District', city: 'Dubois', state: 'ID', districts: { name: 'Clark County School District' } });
+  const fremont = resolveSchoolMatchFromCandidates(
+    { type: 'school_update', school_name: 'Fremont High School', district_name: 'Fremont County Joint School District', state: 'ID' },
+    [
+      school('South Fremont High School', { state: 'ID', districts: { name: 'Fremont County Joint School District' } }),
+      school('North Fremont High School', { state: 'ID', districts: { name: 'Fremont County Joint School District' } }),
+    ],
+  );
+  assert(fremont.status === 'ambiguous', 'Fremont High School should be ambiguous when North and South Fremont both match context.');
+  const missing = resolveSchoolMatchFromCandidates({ type: 'school_update', school_name: 'New Example High School', district_name: 'Example District', city: 'Example', county: 'Example', state: 'ID', create_if_missing: true }, [school('Existing Example High School', { city: 'Other', state: 'ID' })]);
+  assert(missing.status === 'none', 'A genuinely missing school should not alias-match an unrelated existing school.');
 
   const empty = await readImportApiResponse(new Response('', { status: 500 }));
   assert(!empty.ok && empty.message.includes('empty response'), 'Frontend helper should explain empty API responses.');
