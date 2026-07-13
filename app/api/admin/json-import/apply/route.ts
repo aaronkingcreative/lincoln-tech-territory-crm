@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/admin-auth';
 import { DbRow } from '@/lib/coverage';
-import { ImportFieldChange, ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedType } from '@/lib/json-import';
+import { ImportFieldChange, ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedType, validationMessagesForItem } from '@/lib/json-import';
 import { createServiceClient, hasSupabaseServiceCredentials } from '@/lib/supabase';
 import { possibleVariantMessage, resolveSchoolMatch, storeSchoolAlias } from '@/lib/school-matching';
 import { likelyDuplicateSchool, requiredSchoolCreateMissing, resolveDistrict, schoolCreatePayload } from '@/lib/school-create';
@@ -129,6 +129,9 @@ export async function POST(request: NextRequest) {
     log(summary.run_id, 'item', { item_index: index, item_type: item.type, target_school: str(item.school_name), matched_school_id: school?.id });
     try {
       const typeInfo = supportedType(item.type);
+      const validation = validationMessagesForItem(item);
+      for (const warning of validation.warnings) summary.warnings.push({ ...base, reason: warning });
+      if (validation.errors.length) { for (const reason of validation.errors) summary.failed.push({ ...base, reason }); continue; }
       if (schoolMatchResult.status === 'missing_id') { summary.failed.push({ ...base, reason: schoolMatchResult.reason, suggested_fix: 'Check school_id or remove it to match by name.' }); continue; }
       if (schoolMatchResult.status === 'ambiguous') { summary.failed.push({ ...base, reason: schoolMatchResult.reason, suggested_fix: 'Include school_id to choose the correct school.', warnings: schoolMatchResult.matches.map(match => possibleVariantMessage(str(item.school_name) ?? 'Incoming school', match.matchedName)) }); continue; }
       if (baseWarnings.length && school?.id) summary.warnings.push({ ...base, record_id: school.id, school_record_id: school.id, reason: baseWarnings.join(' ') });
@@ -139,7 +142,7 @@ export async function POST(request: NextRequest) {
         if (item.type === 'school_create' && activeSchool) { summary.failed.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(activeSchool.name) ?? 'an existing school') }); continue; }
         if (!activeSchool && (item.type === 'school_create' || item.create_if_missing === true)) {
           const missing = requiredSchoolCreateMissing(item);
-          if (missing.length) { summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Include district_name, county, state, address or city/state, and a source.' }); continue; }
+          if (missing.length) { summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Include district_name, county, state, and at least one of city, address, website, or source_url.' }); continue; }
           const duplicate = await likelyDuplicateSchool(db, item);
           if (duplicate) { summary.failed.push({ ...base, record_id: duplicate.id, school_record_id: duplicate.id, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school') }); continue; }
           const districtResult = await resolveDistrict(db, item);
@@ -151,7 +154,7 @@ export async function POST(request: NextRequest) {
           const row={...base, district: str(districtResult.district.name) ?? base.district, record_id: activeSchool.id, school_record_id: activeSchool.id, district_record_id: districtResult.district.id, fields_changed: Object.entries(payload).filter(([, to]) => present(to)).map(([field, to]) => ({ field, label: label(field), to })), message: districtResult.created ? 'Verified school and district were created.' : 'Verified school was created and linked to the district.'};
           summary.created.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(activeSchool.name) ?? str(item.school_name) ?? 'New school', record_id: activeSchool.id, verified_fields: ['name','district_id'] }); addId(summary, activeSchool.id); continue;
         }
-        if (!activeSchool) { summary.failed.push({ ...base, reason: 'School not found. Add create_if_missing: true or use school_create.', suggested_fix: 'Check the school name, include school_id, or intentionally create the school.' }); continue; }
+        if (!activeSchool) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}. This item is blocked because create_if_missing is not true.`, suggested_fix: 'Check the school name, include school_id, or intentionally create the school.' }); continue; }
         const c = changesFor(item, activeSchool, schoolFields);
         if (Object.keys(c.update).length) {
           const updateObject = { ...c.update, updated_at: new Date().toISOString(), last_ai_update_at: new Date().toISOString(), last_ai_update_run_id: summary.run_id };

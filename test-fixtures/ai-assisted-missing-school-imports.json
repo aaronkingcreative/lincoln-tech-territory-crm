@@ -1,0 +1,90 @@
+{
+  "description": "Fixtures for AI Assisted Update missing-school preview/apply behavior.",
+  "fixtures": {
+    "school_create_valid": {
+      "items": [
+        {
+          "type": "school_create",
+          "school_name": "Council Jr/Sr High School",
+          "district_name": "Council School District",
+          "county": "Adams",
+          "state": "ID",
+          "city": "Council",
+          "website": "https://www.csd13.org/",
+          "source_url": "https://www.csd13.org/"
+        }
+      ],
+      "expected_preview": "new school to create"
+    },
+    "school_update_create_if_missing_true": {
+      "items": [
+        {
+          "type": "school_update",
+          "school_name": "Council Jr/Sr High School",
+          "district_name": "Council School District",
+          "create_if_missing": true,
+          "county": "Adams",
+          "state": "ID",
+          "city": "Council",
+          "website": "https://www.csd13.org/",
+          "source_url": "https://www.csd13.org/"
+        }
+      ],
+      "expected_preview": "new school to create when missing"
+    },
+    "school_update_missing_without_create_if_missing": {
+      "items": [
+        {
+          "type": "school_update",
+          "school_name": "Council Jr/Sr High School",
+          "district_name": "Council School District",
+          "county": "Adams",
+          "state": "ID",
+          "city": "Council",
+          "website": "https://www.csd13.org/"
+        },
+        {
+          "type": "school_update",
+          "school_name": "Gooding High School",
+          "phone": "208-934-4321",
+          "source_url": "https://www.goodingschools.org/"
+        }
+      ],
+      "expected_preview": "Council is blocked, Gooding can still update"
+    },
+    "likely_duplicate": {
+      "existing_school_context": {
+        "school_name": "South Fremont High School",
+        "district_name": "Fremont County Joint School District",
+        "county": "Fremont",
+        "city": "St. Anthony",
+        "state": "ID"
+      },
+      "items": [
+        {
+          "type": "school_update",
+          "school_name": "Fremont High School",
+          "district_name": "Fremont County Joint School District",
+          "create_if_missing": true,
+          "county": "Fremont",
+          "city": "St. Anthony",
+          "state": "ID",
+          "source_url": "https://sfhs.sd215.net/"
+        }
+      ],
+      "expected_preview": "possible duplicate blocks auto-create"
+    },
+    "exact_existing_update": {
+      "items": [
+        {
+          "type": "school_update",
+          "school_name": "Gooding High School",
+          "phone": "208-934-4321",
+          "website": "https://www.goodingschools.org/",
+          "source_url": "https://www.goodingschools.org/"
+        }
+      ],
+      "expected_preview": "existing Gooding High School updates"
+    }
+  }
+}

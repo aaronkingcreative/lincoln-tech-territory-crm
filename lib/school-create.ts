@@ -18,8 +18,7 @@ export function requiredSchoolCreateMissing(item: JsonImportItem) {
   if (!str(item.district_name)) missing.push('district_name');
   if (!str(item.county)) missing.push('county');
   if (!str(item.state)) missing.push('state');
-  if (!str(item.address) && !(str(item.city) && str(item.state))) missing.push('address or city/state');
-  if (!str(item.source_url) && !str(item.source_notes)) missing.push('source_url or source_notes');
+  if (!str(item.city) && !str(item.address) && !str(item.website) && !str(item.source_url)) missing.push('one of city, address, website, or source_url');
   return missing;
 }
 
