@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedItemTypes, supportedType } from '@/lib/json-import';
 import { createServiceClient } from '@/lib/supabase';
+import { possibleVariantMessage, resolveSchoolMatch } from '@/lib/school-matching';
 import { likelyDuplicateSchool, present, requiredSchoolCreateMissing, resolveDistrict, schoolCreatePayload, schoolCreateFields, str } from '@/lib/school-create';
 
 export const dynamic = 'force-dynamic';
@@ -24,18 +25,21 @@ export async function POST(request: NextRequest) {
   try {
     const raw = await request.json(); const items = normalizeImport(raw); const db = createServiceClient(); const summary = empty();
     for (const item of items) {
-      const school = await find(db, 'schools', item.school_id, item.school_name); const district = await find(db, 'districts', item.district_id ?? school?.district_id, item.district_name);
+      const schoolMatchResult = await resolveSchoolMatch(db, item); const schoolMatch = schoolMatchResult.status === 'matched' ? schoolMatchResult.match : null; const school = schoolMatch?.school ?? null; const district = await find(db, 'districts', item.district_id ?? school?.district_id, item.district_name);
       const base = { type: item.type, target_name: str(item.school_name) ?? str(item.district_name) ?? str(item.contact_name) ?? str(item.name) ?? str(item.title), school: str(school?.name) ?? str(item.school_name), district: str(district?.name) ?? str(item.district_name), source_url: item.source_url };
       const info = supportedType(item.type);
       if (!info) { summary.skipped.push({ ...base, reason: 'Skipped because unsupported item type.' }); continue; }
       if (!info.importable) { summary.warnings.push({ ...base, reason: 'This item type is recognized but not importable yet.' }); continue; }
+      if (schoolMatchResult.status === 'missing_id') { summary.failed.push({ ...base, reason: schoolMatchResult.reason, suggested_fix: 'Check school_id or remove it to match by name.' }); continue; }
+      else if (schoolMatchResult.status === 'ambiguous') { summary.failed.push({ ...base, reason: schoolMatchResult.reason, suggested_fix: 'Include school_id to choose the correct school.', warnings: schoolMatchResult.matches.map(match => possibleVariantMessage(str(item.school_name) ?? 'Incoming school', match.matchedName)) }); continue; }
+      else if (schoolMatch?.warnings.length) summary.warnings.push({ ...base, record_id: school.id, school_record_id: school.id, reason: schoolMatch.warnings.join(' '), warnings: schoolMatch.warnings });
       if ((item.type === 'school_note_create' || item.type === 'school_program_update' || item.type === 'contact_create' || item.type === 'contact_update') && str(item.school_name) && !school) summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name)}`, suggested_fix: 'Check school_name or include school_id before importing.' });
       else if ((item.type.includes('school') || item.type === 'task_create') && str(item.school_name) && !school && item.type !== 'school_update' && item.type !== 'school_create') summary.warnings.push({ ...base, reason: 'School not found. This item may fail unless it is a global task.' });
       if (item.type === 'school_update') {
         if (!school && item.create_if_missing === true) {
           const missing = requiredSchoolCreateMissing(item); const duplicate = missing.length ? null : await likelyDuplicateSchool(db, item); const districtResult = missing.length || duplicate ? null : await resolveDistrict(db, item);
           if (missing.length) summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Add required create fields or use an existing school name.' });
-          else if (duplicate) summary.failed.push({ ...base, reason: `Possible duplicate found: ${duplicate.name}. Use exact existing school name or include school_id.`, record_id: duplicate.id });
+          else if (duplicate) summary.failed.push({ ...base, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school'), record_id: duplicate.id });
           else if (districtResult?.error) summary.failed.push({ ...base, reason: districtResult.error, suggested_fix: 'Include district_id or clearer district_name/county/state.' });
           else summary.created.push({ ...base, district: str(districtResult?.district?.name) ?? str(item.district_name), reason: 'Will create new school.', fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
         } else if (!school) summary.failed.push({ ...base, reason: 'School not found. Add create_if_missing: true or use school_create.', suggested_fix: 'Use exact existing school name, include school_id, add create_if_missing: true, or use school_create.' });
@@ -44,7 +48,7 @@ export async function POST(request: NextRequest) {
       else if (item.type === 'school_create') {
         const missing = requiredSchoolCreateMissing(item); const duplicate = missing.length ? null : await likelyDuplicateSchool(db, item); const districtResult = missing.length || duplicate ? null : await resolveDistrict(db, item);
         if (missing.length) summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.` });
-        else if (duplicate) summary.failed.push({ ...base, reason: `Possible duplicate found: ${duplicate.name}. Use exact existing school name or include school_id.`, record_id: duplicate.id });
+        else if (duplicate) summary.failed.push({ ...base, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school'), record_id: duplicate.id });
         else if (districtResult?.error) summary.failed.push({ ...base, reason: districtResult.error, suggested_fix: 'Include district_id or clearer district_name/county/state.' });
         else summary.created.push({ ...base, district: str(districtResult?.district?.name) ?? str(item.district_name), reason: 'Will create new school.', fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
       }

@@ -264,3 +264,17 @@ alter table contacts
     else null
   end;
 alter table contacts add constraint contacts_confidence_score_check check (confidence_score is null or confidence_score in ('high','medium','low'));
+
+-- Optional AI Assisted Update school aliases. Additive and safe to rerun.
+create table if not exists school_aliases (
+  id uuid primary key default gen_random_uuid(),
+  school_id uuid references schools(id) on delete cascade,
+  alias text not null,
+  normalized_alias text not null,
+  source text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create unique index if not exists school_aliases_school_id_normalized_alias_key on school_aliases(school_id, normalized_alias);
+create index if not exists school_aliases_normalized_alias_idx on school_aliases(normalized_alias);
+alter table school_aliases enable row level security;

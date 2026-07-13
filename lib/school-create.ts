@@ -1,5 +1,6 @@
 import { DbRow } from '@/lib/coverage';
 import { JsonImportItem } from '@/lib/json-import';
+import { normalizeSchoolNameForMatching } from '@/lib/school-matching';
 import { createServiceClient } from '@/lib/supabase';
 
 export const schoolCreateFields = ['name','district_id','county','state','address','city','zip','phone','fax','website','source_url','source_notes','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','school_profile_notes','nces_id','school_type','territory_status','verification_status'] as const;
@@ -7,7 +8,8 @@ export type SchoolCreateField = typeof schoolCreateFields[number];
 
 export const present = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
 export const str = (v: unknown) => typeof v === 'string' && v.trim() ? v.trim() : undefined;
-export const normalizeText = (v?: string) => v?.toLowerCase().replace(/\b(senior|sr|high|school|jr|junior|public)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ') ?? '';
+export const normalizeText = (v?: string) => v?.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ') ?? '';
+const normalizeSchoolName = (v?: string) => v ? normalizeSchoolNameForMatching(v) : '';
 export const normalizeUrl = (v?: string) => v?.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '') ?? '';
 
 export function requiredSchoolCreateMissing(item: JsonImportItem) {
@@ -44,11 +46,12 @@ export async function likelyDuplicateSchool(db: ReturnType<typeof createServiceC
   if (str(item.nces_id)) { const byNces = await db.from('schools').select('*').eq('nces_id', str(item.nces_id)).maybeSingle(); if (byNces.data) return byNces.data as DbRow; }
   if (str(item.source_url)) { const bySource = await db.from('schools').select('*').eq('source_url', str(item.source_url)).maybeSingle(); if (bySource.data) return bySource.data as DbRow; }
   const { data } = await db.from('schools').select('*,districts(name)');
-  const wantedName = normalizeText(str(item.school_name)); const wantedCity = normalizeText(str(item.city)); const wantedCounty = normalizeText(str(item.county)); const wantedDistrict = normalizeText(str(item.district_name));
+  const wantedName = normalizeSchoolName(str(item.school_name)); const wantedCity = normalizeText(str(item.city)); const wantedCounty = normalizeText(str(item.county)); const wantedDistrict = normalizeText(str(item.district_name));
   return ((data ?? []) as DbRow[]).find(s => {
     const samePlace = (!wantedCity || normalizeText(str(s.city)) === wantedCity) && (!wantedCounty || normalizeText(str(s.county)) === wantedCounty);
     const sameDistrict = !wantedDistrict || normalizeText(str((s.districts as { name?: string } | undefined)?.name)) === wantedDistrict;
-    const sameName = normalizeText(str(s.name)) === wantedName || normalizeText(str(s.name)).includes(wantedName) || wantedName.includes(normalizeText(str(s.name)));
+    const existingName = normalizeSchoolName(str(s.name));
+    const sameName = existingName === wantedName || existingName.includes(wantedName) || wantedName.includes(existingName);
     return sameName && samePlace && sameDistrict;
   }) ?? null;
 }
