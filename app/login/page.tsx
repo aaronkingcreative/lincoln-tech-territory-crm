@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createClientBrowser } from '@/lib/supabase';
 
-const APPROVED_ADMIN_EMAILS = new Set(['kenking@northrim.net', 'aking81@gmail.com']);
+const APPROVED_ADMIN_EMAILS = new Set(['kenking@northrim.net', 'aking81@gmail.com', 'NEW_EMAIL_HERE']);
 const NOT_APPROVED_MESSAGE = 'This email is not approved for access.';
 
 export default function Login() {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createClientBrowser } from '@/lib/supabase';
 
-const APPROVED_ADMIN_EMAILS = new Set(['kenking@northrim.net', 'aking81@gmail.com']);
+const APPROVED_ADMIN_EMAILS = new Set(['kenking@northrim.net', 'aking81@gmail.com', 'NEW_EMAIL_HERE']);
 const ACCESS_DENIED_MESSAGE = 'Access denied. This email is not approved for access.';
 const EXPIRED_LINK_MESSAGE =
   'This sign-in link has expired or was already used. Request a new link.';
