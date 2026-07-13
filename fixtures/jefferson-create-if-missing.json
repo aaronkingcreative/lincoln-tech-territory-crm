@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "type": "school_update",
+      "school_name": "Jefferson High School",
+      "district_name": "Jefferson County Joint School District",
+      "create_if_missing": true,
+      "county": "Jefferson",
+      "state": "ID",
+      "city": "Menan",
+      "phone": "208-754-4550",
+      "fax": "208-754-4581",
+      "website": "https://jeffersonhigh.jeffersonsd251.org/",
+      "address": "529 North 3470 East, Menan, ID 83434",
+      "source_url": "https://jeffersonhigh.jeffersonsd251.org/",
+      "source_notes": "Official Jefferson High School site. Created from AI Assisted Update because school was missing from baseline. Needs verification.",
+      "overwrite": false
+    }
+  ]
+}

@@ -91,7 +91,7 @@ async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Pr
   return { ok: true };
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const admin = await requireAdmin(request); if ('error' in admin) return NextResponse.json({ error: admin.error }, { status: admin.status });
   if (!hasSupabaseServiceCredentials()) return NextResponse.json({ ...result(), ok: false, status: 'failed', failed: [{ type: 'service_role_check', reason: 'Admin apply route is missing server-side Supabase service role credentials.' }] }, { status: 500 });
   const db = createServiceClient(); const summary = result(); let raw: unknown; let items: JsonImportItem[];
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
           const insertResponse = await db.from('schools').insert(payload).select('*').single();
           if (insertResponse.error) throw insertResponse.error;
           activeSchool = insertResponse.data as DbRow;
-          const row={...base, district: str(districtResult.district.name) ?? base.district, record_id: activeSchool.id, school_record_id: activeSchool.id, district_record_id: districtResult.district.id, fields_changed: Object.entries(payload).filter(([, to]) => present(to)).map(([field, to]) => ({ field, label: label(field), to })), message: districtResult.created ? 'Verified school and district were created.' : 'Verified school was created and linked to the district.'};
+          const row={...base, district: str(districtResult.district.name) ?? base.district, record_id: activeSchool.id, school_record_id: activeSchool.id, district_record_id: districtResult.district.id, fields_changed: Object.entries(payload).filter(([, to]) => present(to)).map(([field, to]) => ({ field, label: label(field), to })), message: `Created school needing verification: ${str(activeSchool.name) ?? str(item.school_name) ?? 'New school'}`};
           summary.created.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(activeSchool.name) ?? str(item.school_name) ?? 'New school', record_id: activeSchool.id, verified_fields: ['name','district_id'] }); addId(summary, activeSchool.id); continue;
         }
         if (!activeSchool) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}. This item is blocked because create_if_missing is not true.`, suggested_fix: 'Check the school name, include school_id, or intentionally create the school.' }); continue; }
@@ -234,4 +234,13 @@ export async function POST(request: NextRequest) {
   for (const id of summary.affected_record_ids ?? []) revalidatePath(`/schools/${id}`);
   log(summary.run_id, 'finished', { status: summary.status, new_run_id: summary.run_id, created_contacts_count: summary.created.filter(item => String(item.type).startsWith('contact')).length, failed_contacts_count: summary.failed.filter(item => String(item.type).startsWith('contact')).length, ...counts });
   return NextResponse.json(summary, { status: summary.status === 'failed' ? 422 : 200 });
+}
+
+
+export async function POST(request: NextRequest) {
+  try {
+    return await handlePost(request);
+  } catch (error) {
+    return NextResponse.json({ ...result(), ok: false, status: 'error', failed: [{ type: 'server_error', reason: 'Importer server error', database_error: { message: error instanceof Error ? error.message : 'Unexpected importer server error.' } }], error: 'Importer server error', details: error instanceof Error ? error.message : 'Unexpected importer server error.' }, { status: 500 });
+  }
 }

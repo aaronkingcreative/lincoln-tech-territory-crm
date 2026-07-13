@@ -20,10 +20,17 @@ function previewFields(item: PreviewRecord, existing: Record<string, unknown> | 
 function countTypes(items: JsonImportItem[]) { return items.reduce<Record<string, number>>((a, i) => ({ ...a, [i.type]: (a[i.type] ?? 0) + 1 }), {}); }
 function hashItems(items: JsonImportItem[]) { return createHash('sha256').update(JSON.stringify({ items })).digest('hex'); }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const admin = await requireAdmin(request); if ('error' in admin) return NextResponse.json({ error: admin.error }, { status: admin.status });
+  let raw: unknown;
+  let items: JsonImportItem[];
   try {
-    const raw = await request.json(); const items = normalizeImport(raw); const db = createServiceClient(); const summary = empty();
+    raw = await request.json();
+    items = normalizeImport(raw);
+  } catch (error) {
+    return NextResponse.json({ ok: false, status: 'failed', valid: false, error: 'Invalid JSON import payload', details: error instanceof Error ? error.message : 'Invalid JSON import payload.' }, { status: 400 });
+  }
+  const db = createServiceClient(); const summary = empty();
     for (const [index, item] of items.entries()) {
       const schoolMatchResult = await resolveSchoolMatch(db, item); const schoolMatch = schoolMatchResult.status === 'matched' ? schoolMatchResult.match : null; const school = schoolMatch?.school ?? null; const district = await find(db, 'districts', item.district_id ?? school?.district_id, item.district_name);
       const base = { item_index: index, type: item.type, target_name: str(item.school_name) ?? str(item.district_name) ?? str(item.contact_name) ?? str(item.name) ?? str(item.title), school: str(school?.name) ?? str(item.school_name), district: str(district?.name) ?? str(item.district_name), source_url: item.source_url };
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
           if (missing.length) summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Add required create fields or use an existing school name.' });
           else if (duplicate) summary.failed.push({ ...base, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school'), record_id: duplicate.id });
           else if (districtResult?.error) summary.failed.push({ ...base, reason: districtResult.error, suggested_fix: 'Include district_id or clearer district_name/county/state.' });
-          else summary.created.push({ ...base, district: str(districtResult?.district?.name) ?? str(item.district_name), reason: 'Will create new school because create_if_missing is true.', fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
+          else summary.created.push({ ...base, district: str(districtResult?.district?.name) ?? str(item.district_name), reason: `Will create new school needing verification: ${str(item.school_name) ?? 'New school'}`, fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
         } else if (!school) summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}. This item is blocked because create_if_missing is not true.`, suggested_fix: 'Use exact existing school name, include school_id, add create_if_missing: true, or use school_create.' });
         else summary.updated.push({ ...base, record_id: school?.id, fields_changed: previewFields(item, school, schoolFields) });
       }
@@ -81,7 +88,13 @@ export async function POST(request: NextRequest) {
     const response = { valid: summary.updated.length + summary.created.length > 0, already_imported: !!previousRun?.id, previous_import_run: previousRun ?? null, input_hash: inputHash, supported_item_types: supportedItemTypes, summary: { count: items.length, types: countTypes(items), preview: items }, ...summary };
     const { data } = await db.from('json_imports').insert({ imported_by_email: admin.email, import_type: 'manual_json_import', raw_json: raw, summary: response, status: response.valid ? 'validated' : 'failed' }).select('id').single();
     return NextResponse.json({ ...response, import_id: data?.id });
+}
+
+
+export async function POST(request: NextRequest) {
+  try {
+    return await handlePost(request);
   } catch (error) {
-    return NextResponse.json({ valid: false, error: error instanceof Error ? error.message : 'Invalid JSON import payload.' }, { status: 400 });
+    return NextResponse.json({ ok: false, status: 'error', valid: false, error: 'Importer server error', details: error instanceof Error ? error.message : 'Unexpected importer server error.' }, { status: 500 });
   }
 }
