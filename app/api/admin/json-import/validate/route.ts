@@ -53,7 +53,7 @@ async function handlePost(request: NextRequest) {
           else if (districtResult?.error) summary.failed.push({ ...base, reason: districtResult.error, suggested_fix: 'Include district_id or clearer district_name/county/state.' });
           else summary.created.push({ ...base, district: str(districtResult?.district?.name) ?? str(item.district_name), reason: `Will create new school needing verification: ${str(item.school_name) ?? 'New school'}`, fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
         } else if (!school) summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}. This item is blocked because create_if_missing is not true.`, suggested_fix: 'Use exact existing school name, include school_id, add create_if_missing: true, or use school_create.' });
-        else summary.updated.push({ ...base, record_id: school?.id, fields_changed: previewFields(item, school, schoolFields) });
+        else summary.updated.push({ ...base, record_id: school?.id, school_record_id: school?.id, reason: schoolMatch?.warnings.join(' '), warnings: schoolMatch?.warnings.length ? schoolMatch.warnings : undefined, fields_changed: previewFields(item, school, schoolFields) });
       }
       else if (item.type === 'school_create') {
         const missing = requiredSchoolCreateMissing(item); const duplicate = missing.length ? null : await likelyDuplicateSchool(db, item); const districtResult = missing.length || duplicate ? null : await resolveDistrict(db, item);

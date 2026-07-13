@@ -278,3 +278,21 @@ create table if not exists school_aliases (
 create unique index if not exists school_aliases_school_id_normalized_alias_key on school_aliases(school_id, normalized_alias);
 create index if not exists school_aliases_normalized_alias_idx on school_aliases(normalized_alias);
 alter table school_aliases enable row level security;
+
+-- Seed common AI Assisted Update aliases without creating duplicate schools.
+insert into school_aliases (school_id, alias, normalized_alias, source)
+select schools.id, aliases.alias, aliases.normalized_alias, 'ai_assisted_update_seed'
+from (values
+  ('Notus Jr/Sr High School', 'Notus High School', 'notus high school'),
+  ('Wilder Jr/Sr High School', 'Wilder High School', 'wilder high school'),
+  ('Rockland Public School', 'Rockland High School', 'rockland high school'),
+  ('Richard McKenna Charter High School', 'Richard McKenna Charter School', 'richard mckenna charter school'),
+  ('Nampa Senior High School', 'Nampa High School', 'nampa high school'),
+  ('Shelley Senior High School', 'Shelley High School', 'shelley high school'),
+  ('Clark County Jr/Sr High School', 'Clark County High School', 'clark county high school')
+) as aliases(school_name, alias, normalized_alias)
+join schools on lower(schools.name) = lower(aliases.school_name)
+on conflict (school_id, normalized_alias) do update set
+  alias = excluded.alias,
+  source = excluded.source,
+  updated_at = now();
