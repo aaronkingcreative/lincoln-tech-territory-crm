@@ -1,4 +1,4 @@
-export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'kenking@northrim.net,aking81@gmail.com')
+export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'kenking@northrim.net,aking81@gmail.com,NEW_EMAIL_HERE')
   .split(',')
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
