@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { DbRow } from '@/lib/coverage';
 import { ImportFieldChange, ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedType } from '@/lib/json-import';
 import { createServiceClient, hasSupabaseServiceCredentials } from '@/lib/supabase';
+import { possibleVariantMessage, resolveSchoolMatch, storeSchoolAlias } from '@/lib/school-matching';
 import { likelyDuplicateSchool, requiredSchoolCreateMissing, resolveDistrict, schoolCreatePayload } from '@/lib/school-create';
 
 export const dynamic = 'force-dynamic';
@@ -43,14 +44,6 @@ function changesFor(item: Record<string, unknown> & { overwrite?: boolean }, exi
 function verifyFields(row: DbRow | null | undefined, changed: { field: string; to?: unknown }[]) {
   if (!row) return ['No database row was returned after the write.'];
   return changed.filter(change => !sameValue(row[change.field], change.to)).map(change => `${label(change.field)} did not persist. Expected ${String(change.to ?? '')}, found ${String(row[change.field] ?? 'Missing')}.`);
-}
-async function findSchool(db: ReturnType<typeof createServiceClient>, item: JsonImportItem) {
-  const id = str(item.school_id); if (id) return (await db.from('schools').select('*').eq('id', id).maybeSingle()).data as DbRow | null;
-  const name = str(item.school_name); if (!name) return null;
-  const exact = (await db.from('schools').select('*').ilike('name', name).maybeSingle()).data as DbRow | null;
-  if (exact) return exact;
-  const { data } = await db.from('schools').select('*');
-  return ((data ?? []) as DbRow[]).find(s => normalize(str(s.name)) === normalize(name)) ?? null;
 }
 async function findDistrict(db: ReturnType<typeof createServiceClient>, item: JsonImportItem, school?: DbRow | null) {
   const id = str(item.district_id) ?? str(school?.district_id); if (id) return (await db.from('districts').select('*').eq('id', id).maybeSingle()).data as DbRow | null;
@@ -130,21 +123,25 @@ export async function POST(request: NextRequest) {
   log(summary.run_id, 'started', { commit_mode: commitMode, input_hash: inputHash, retry_mode: commitMode.includes('retry'), item_count: items.length, contact_create_count: contactCreateCount, uses_service_role_client: true, new_run_id: summary.run_id });
 
   for (const [index, item] of items.entries()) {
-    const school = await findSchool(db, item); const district = await findDistrict(db, item, school); const contactName = str(item.contact_name) ?? str(item.name);
-    const base = { item_index: index, type: item.type, target_name: str(item.school_name) ?? str(item.district_name) ?? contactName ?? str(item.title), school: str(school?.name) ?? str(item.school_name), district: str(district?.name) ?? str(item.district_name), source_url: item.source_url };
+    const schoolMatchResult = await resolveSchoolMatch(db, item); const schoolMatch = schoolMatchResult.status === 'matched' ? schoolMatchResult.match : null; const school = schoolMatch?.school ?? null; const district = await findDistrict(db, item, school); const contactName = str(item.contact_name) ?? str(item.name);
+    const baseWarnings = schoolMatch?.warnings ?? [];
+    const base = { item_index: index, type: item.type, target_name: str(item.school_name) ?? str(item.district_name) ?? contactName ?? str(item.title), school: str(school?.name) ?? str(item.school_name), district: str(district?.name) ?? str(item.district_name), source_url: item.source_url, warnings: baseWarnings.length ? baseWarnings : undefined };
     log(summary.run_id, 'item', { item_index: index, item_type: item.type, target_school: str(item.school_name), matched_school_id: school?.id });
     try {
       const typeInfo = supportedType(item.type);
+      if (schoolMatchResult.status === 'missing_id') { summary.failed.push({ ...base, reason: schoolMatchResult.reason, suggested_fix: 'Check school_id or remove it to match by name.' }); continue; }
+      if (schoolMatchResult.status === 'ambiguous') { summary.failed.push({ ...base, reason: schoolMatchResult.reason, suggested_fix: 'Include school_id to choose the correct school.', warnings: schoolMatchResult.matches.map(match => possibleVariantMessage(str(item.school_name) ?? 'Incoming school', match.matchedName)) }); continue; }
+      if (baseWarnings.length && school?.id) summary.warnings.push({ ...base, record_id: school.id, school_record_id: school.id, reason: baseWarnings.join(' ') });
       if (!typeInfo) { summary.skipped.push({ ...base, reason: 'Skipped because unsupported item type.', suggested_fix: 'Use one of the supported item types shown in the AI Assisted Update page.' }); continue; }
       if (!typeInfo.importable) { summary.warnings.push({ ...base, reason: 'This item type is recognized but not importable yet.' }); summary.skipped.push({ ...base, reason: 'Recognized but not importable yet.' }); continue; }
       if (item.type === 'school_update' || item.type === 'school_create') {
         let activeSchool = school;
-        if (item.type === 'school_create' && activeSchool) { summary.failed.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, reason: `Possible duplicate found: ${activeSchool.name}. Use exact existing school name or include school_id.` }); continue; }
+        if (item.type === 'school_create' && activeSchool) { summary.failed.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(activeSchool.name) ?? 'an existing school') }); continue; }
         if (!activeSchool && (item.type === 'school_create' || item.create_if_missing === true)) {
           const missing = requiredSchoolCreateMissing(item);
           if (missing.length) { summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Include district_name, county, state, address or city/state, and a source.' }); continue; }
           const duplicate = await likelyDuplicateSchool(db, item);
-          if (duplicate) { summary.failed.push({ ...base, record_id: duplicate.id, school_record_id: duplicate.id, reason: `Possible duplicate found: ${duplicate.name}. Use exact existing school name or include school_id.` }); continue; }
+          if (duplicate) { summary.failed.push({ ...base, record_id: duplicate.id, school_record_id: duplicate.id, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school') }); continue; }
           const districtResult = await resolveDistrict(db, item);
           if (districtResult.error || !districtResult.district?.id) { summary.failed.push({ ...base, reason: districtResult.error ?? 'District could not be resolved.', suggested_fix: 'Include district_id or clearer district_name/county/state.' }); continue; }
           const payload = schoolCreatePayload(item, districtResult.district.id, summary.run_id);
@@ -172,8 +169,8 @@ export async function POST(request: NextRequest) {
           const failures = verifyFields(reread, c.changed);
           log(summary.run_id, 'verify_school', { item_index: index, item_type: item.type, school_name: activeSchool.name, matched_school_id: activeSchool.id, update_object: updateObject, verification_result: { ok: failures.length === 0, failures } });
           if (failures.length) { summary.verification.failed.push({ target: activeSchool.name, record_id: activeSchool.id, failures }); summary.failed.push({ ...base, record_id: activeSchool.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' '), suggested_fix: 'Check database triggers, column names, and row-level permissions, then retry.' }); }
-          else { const row={...base, record_id: activeSchool.id, school_record_id: activeSchool.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(reread?.name) ?? activeSchool.name, record_id: activeSchool.id, verified_fields: c.changed.map(f => f.field) }); addId(summary, activeSchool.id); }
-        } else summary.unchanged.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, fields_skipped: c.skipped, reason: 'No school fields changed because supplied values were already present, blank, or intentionally preserved.' });
+          else { if (schoolMatch?.method === 'alias' || schoolMatch?.method === 'normalized_name') await storeSchoolAlias(db, activeSchool.id, str(item.school_name) ?? str(activeSchool.name) ?? ''); const row={...base, record_id: activeSchool.id, school_record_id: activeSchool.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(reread?.name) ?? activeSchool.name, record_id: activeSchool.id, verified_fields: c.changed.map(f => f.field) }); addId(summary, activeSchool.id); }
+        } else { if (schoolMatch?.method === 'alias' || schoolMatch?.method === 'normalized_name') await storeSchoolAlias(db, activeSchool.id, str(item.school_name) ?? str(activeSchool.name) ?? ''); summary.unchanged.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, fields_skipped: c.skipped, reason: 'No school fields changed because supplied values were already present, blank, or intentionally preserved.' }); }
       } else if (item.type === 'contact_create' || item.type === 'contact_update') {
         const title = str(item.title); if (!contactName && !title) { summary.failed.push({ ...base, reason: 'Contact needs at least name/contact_name or title.' }); continue; }
         if (str(item.school_name) && !school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name)}`, suggested_fix: 'Check school_name or import the school before creating this contact.' }); continue; }
@@ -197,7 +194,7 @@ export async function POST(request: NextRequest) {
           const reread = await applyDb<DbRow>(db.from('contacts').select('*').eq('id', contactRecordId).single());
           const failures = verifyFields(reread, [{ field:'school_id', to: school?.id }, { field:'name', to: contactName }, { field:'title', to: title }].filter(f => present(f.to)));
           if (failures.length) { summary.verification.failed.push({ target: contactName ?? title ?? 'contact', record_id: contactRecordId, failures }); summary.failed.push({ ...base, record_id:contactRecordId, school_record_id: school?.id, reason: failures.join(' ') }); }
-          else { const row={...base, record_id:contactRecordId, school_record_id: school?.id, fields_changed:[{field:'contact',label:'Contact',to:[contactName,title,email || '(no email)',phone].filter(Boolean).join(' · ')},{field:'school_id',label:'Linked school',to:school?.name ?? school?.id}], message:'Verified contact was created and linked to the school.'}; summary.created.push(row); summary.applied.push(row); summary.verification.contacts_verified.push({ contact: contactName ?? title ?? 'contact', school: school?.name, record_id: contactRecordId }); addId(summary, school?.id ?? contactRecordId); }
+          else { if (school && (schoolMatch?.method === 'alias' || schoolMatch?.method === 'normalized_name')) await storeSchoolAlias(db, school.id, str(item.school_name) ?? str(school.name) ?? ''); const row={...base, record_id:contactRecordId, school_record_id: school?.id, fields_changed:[{field:'contact',label:'Contact',to:[contactName,title,email || '(no email)',phone].filter(Boolean).join(' · ')},{field:'school_id',label:'Linked school',to:school?.name ?? school?.id}], message:'Verified contact was created and linked to the school.'}; summary.created.push(row); summary.applied.push(row); summary.verification.contacts_verified.push({ contact: contactName ?? title ?? 'contact', school: school?.name, record_id: contactRecordId }); addId(summary, school?.id ?? contactRecordId); }
         }
       } else if (item.type === 'district_update') {
         if (!district) { summary.failed.push({ ...base, reason: `District not found: ${str(item.district_name) ?? 'missing district_name'}` }); continue; }
