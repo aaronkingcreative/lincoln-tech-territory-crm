@@ -12,7 +12,8 @@
     "crawl:contacts": "tsx scripts/crawl-contacts.ts",
     "export:xlsx": "tsx scripts/export-xlsx.ts",
     "verify": "npm run build",
-    "verify:clean": "npm ci && npm run build"
+    "verify:clean": "npm ci && npm run build",
+    "test:json-import-regression": "tsx scripts/verify-json-import-regression.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.48.1",
