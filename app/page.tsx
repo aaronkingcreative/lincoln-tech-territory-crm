@@ -106,6 +106,7 @@ export default async function Home() {
         <div className="flex flex-wrap gap-2">
           <Link href="/admin/json-import" className="min-h-11 rounded-xl bg-sky-400 px-4 py-3 font-semibold text-slate-950">Update school data with AI Assisted Update</Link>
           <a href="/api/export" className="min-h-11 rounded-xl border border-slate-700 px-4 py-3">Export XLSX</a>
+          <a href="/api/export/word" className="min-h-11 rounded-xl border border-slate-700 px-4 py-3">Export Word Field Guide</a>
         </div>
       </section>
 
