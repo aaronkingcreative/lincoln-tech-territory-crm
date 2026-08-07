@@ -64,6 +64,8 @@ alter table schools add column if not exists last_contacted_at timestamptz;
 alter table schools add column if not exists next_follow_up_at timestamptz;
 alter table schools add column if not exists last_high_school_visit_at date;
 alter table schools add column if not exists outreach_notes text;
+alter table schools add column if not exists needs_verification boolean default false;
+alter table schools add column if not exists verification_notes text;
 
 create table if not exists programs (id uuid primary key default gen_random_uuid());
 alter table programs add column if not exists school_id uuid references schools(id) on delete cascade;
