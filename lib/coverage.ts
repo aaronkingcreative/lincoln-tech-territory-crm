@@ -6,6 +6,14 @@ const norm = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/&/g, 
 export const isPlaceholderDistrictName = (v: unknown) => typeof v === 'string' && v.startsWith('District To Verify -');
 export const hasValue = (v: unknown) => v !== undefined && v !== null && String(v).trim().length > 0 && String(v).trim() !== '{}';
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+type OptionalQueryResult = { data: DbRow[] | null; error: { message?: string } | null };
+
+function optionalRows(table: string, result: OptionalQueryResult): DbRow[] {
+  if (!result.error) return result.data ?? [];
+  const message = typeof result.error.message === 'string' ? result.error.message : 'Unknown Supabase error';
+  console.error(`Optional Supabase query failed: ${table}`, message);
+  return [];
+}
 export function hasMeaningfulGradeEnrollment(v: unknown) {
   if (!isRecord(v)) return false;
   return Object.values(v).some((value) => hasValue(value));
@@ -24,8 +32,22 @@ export async function getTerritoryData() {
   const [schools, districts, contacts, queue, runs, errors, sources, contactLogs, schoolNotes, tasks, objectives, jsonImports, aiUpdateRuns] = await Promise.all([
     db.from('schools').select('*,districts(name,county,state)').limit(5000), db.from('districts').select('*').limit(1000), db.from('contacts').select('*').limit(10000), db.from('crawl_queue').select('*').limit(50000), db.from('discovery_runs').select('*').order('started_at', { ascending: false }).limit(20), db.from('crawl_errors').select('*').order('created_at', { ascending: false }).limit(500), db.from('source_urls').select('*').limit(5000), db.from('contact_logs').select('*').order('contacted_at', { ascending: false }).limit(5000), db.from('school_notes').select('school_id,note,created_at').order('created_at', { ascending: false }).limit(5000), db.from('recruiting_tasks').select('*').order('created_at', { ascending: false }).limit(5000), db.from('dashboard_objectives').select('*').order('sort_order', { ascending: true }).limit(100), db.from('json_imports').select('*').order('created_at', { ascending: false }).limit(1000), db.from('ai_update_runs').select('*').order('started_at', { ascending: false }).limit(20),
   ]);
-  for (const r of [schools, districts, contacts, queue, runs, errors, sources, schoolNotes]) if (r.error) throw r.error;
-  return { schools: schools.data ?? [], districts: districts.data ?? [], contacts: contacts.data ?? [], queue: queue.data ?? [], runs: runs.data ?? [], errors: errors.data ?? [], sources: sources.data ?? [], contactLogs: contactLogs.data ?? [], schoolNotes: schoolNotes.data ?? [], tasks: tasks.data ?? [], objectives: objectives.data ?? [], jsonImports: jsonImports.data ?? [], aiUpdateRuns: aiUpdateRuns.data ?? [] };
+  for (const result of [schools, districts, contacts]) if (result.error) throw result.error;
+  return {
+    schools: schools.data ?? [],
+    districts: districts.data ?? [],
+    contacts: contacts.data ?? [],
+    queue: optionalRows('crawl_queue', queue),
+    runs: optionalRows('discovery_runs', runs),
+    errors: optionalRows('crawl_errors', errors),
+    sources: optionalRows('source_urls', sources),
+    contactLogs: optionalRows('contact_logs', contactLogs),
+    schoolNotes: optionalRows('school_notes', schoolNotes),
+    tasks: optionalRows('recruiting_tasks', tasks),
+    objectives: optionalRows('dashboard_objectives', objectives),
+    jsonImports: optionalRows('json_imports', jsonImports),
+    aiUpdateRuns: optionalRows('ai_update_runs', aiUpdateRuns),
+  };
 }
 
 export function contactsForSchool(contacts: DbRow[], schoolId: string) { return contacts.filter((c) => c.school_id === schoolId); }

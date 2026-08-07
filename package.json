@@ -14,7 +14,8 @@
     "verify": "npm run build",
     "verify:clean": "npm ci && npm run build",
     "test:json-import-regression": "tsx scripts/verify-json-import-regression.ts",
-    "test:progress-metrics": "tsx scripts/verify-progress-metrics.ts"
+    "test:progress-metrics": "tsx scripts/verify-progress-metrics.ts",
+    "test:schools-resilience": "tsx --tsconfig scripts/tsconfig.json scripts/verify-schools-resilience.tsx"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.48.1",
