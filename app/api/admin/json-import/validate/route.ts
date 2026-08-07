@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { ImportResultGroups, JsonImportItem, normalizeImport, roleCategories, supportedItemTypes, supportedType, validationMessagesForItem } from '@/lib/json-import';
 import { createServiceClient } from '@/lib/supabase';
 import { possibleVariantMessage, resolveSchoolMatch } from '@/lib/school-matching';
-import { likelyDuplicateSchool, present, requiredSchoolCreateMissing, resolveDistrict, schoolCreatePayload, schoolCreateFields, str } from '@/lib/school-create';
+import { likelyDuplicateSchool, placeholderDistrictName, present, requiredSchoolCreateMissing, resolveDistrict, schoolCreatePayload, schoolCreateFields, str, usesPlaceholderDistrict } from '@/lib/school-create';
 
 export const dynamic = 'force-dynamic';
 const fieldLabels: Record<string,string> = { phone:'Phone', website:'Website', address:'Address', city:'City', zip:'ZIP', fax:'Fax', school_type:'School type', territory_status:'Territory status', office_address:'Address', last_high_school_visit_at:'High School Last Visit' };
@@ -47,20 +47,30 @@ async function handlePost(request: NextRequest) {
       else if ((item.type.includes('school') || item.type === 'task_create') && str(item.school_name) && !school && item.type !== 'school_update' && item.type !== 'school_create') summary.warnings.push({ ...base, reason: 'School not found. This item may fail unless it is a global task.' });
       if (item.type === 'school_update') {
         if (!school && item.create_if_missing === true) {
-          const missing = requiredSchoolCreateMissing(item); const duplicate = missing.length ? null : await likelyDuplicateSchool(db, item); const districtResult = missing.length || duplicate ? null : await resolveDistrict(db, item);
+          const missing = requiredSchoolCreateMissing(item); const duplicate = missing.length ? null : await likelyDuplicateSchool(db, item); const districtResult = missing.length || duplicate ? null : await resolveDistrict(db, item, false);
           if (missing.length) summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Add required create fields or use an existing school name.' });
           else if (duplicate) summary.failed.push({ ...base, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school'), record_id: duplicate.id });
           else if (districtResult?.error) summary.failed.push({ ...base, reason: districtResult.error, suggested_fix: 'Include district_id or clearer district_name/county/state.' });
-          else summary.created.push({ ...base, district: str(districtResult?.district?.name) ?? str(item.district_name), reason: `Will create new school needing verification: ${str(item.school_name) ?? 'New school'}`, fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
+          else {
+            const placeholder = usesPlaceholderDistrict(item);
+            const districtName = str(districtResult?.district?.name) ?? str(item.district_name);
+            if (placeholder) summary.warnings.push({ ...base, district: districtName, reason: `District missing. This school will be created under placeholder district "${placeholderDistrictName(str(item.county) ?? '', str(item.state) ?? '')}" and flagged for verification.` });
+            summary.created.push({ ...base, district: districtName, reason: `Will create new school needing verification: ${str(item.school_name) ?? 'New school'}`, fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
+          }
         } else if (!school) summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}. This item is blocked because create_if_missing is not true.`, suggested_fix: 'Use exact existing school name, include school_id, add create_if_missing: true, or use school_create.' });
         else summary.updated.push({ ...base, record_id: school?.id, school_record_id: school?.id, reason: schoolMatch?.warnings.join(' '), warnings: schoolMatch?.warnings.length ? schoolMatch.warnings : undefined, fields_changed: previewFields(item, school, schoolFields) });
       }
       else if (item.type === 'school_create') {
-        const missing = requiredSchoolCreateMissing(item); const duplicate = missing.length ? null : await likelyDuplicateSchool(db, item); const districtResult = missing.length || duplicate ? null : await resolveDistrict(db, item);
+        const missing = requiredSchoolCreateMissing(item); const duplicate = missing.length ? null : await likelyDuplicateSchool(db, item); const districtResult = missing.length || duplicate ? null : await resolveDistrict(db, item, false);
         if (missing.length) summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.` });
         else if (duplicate) summary.failed.push({ ...base, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school'), record_id: duplicate.id });
         else if (districtResult?.error) summary.failed.push({ ...base, reason: districtResult.error, suggested_fix: 'Include district_id or clearer district_name/county/state.' });
-        else summary.created.push({ ...base, district: str(districtResult?.district?.name) ?? str(item.district_name), reason: 'Will create new school.', fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
+        else {
+          const placeholder = usesPlaceholderDistrict(item);
+          const districtName = str(districtResult?.district?.name) ?? str(item.district_name);
+          if (placeholder) summary.warnings.push({ ...base, district: districtName, reason: `District missing. This school will be created under placeholder district "${placeholderDistrictName(str(item.county) ?? '', str(item.state) ?? '')}" and flagged for verification.` });
+          summary.created.push({ ...base, district: districtName, reason: placeholder ? 'Will create new school under a placeholder district and flag its district assignment for review.' : 'Will create new school.', fields_changed: previewFields(schoolCreatePayload(item, districtResult?.district?.id ?? 'preview'), {}, [...schoolCreateFields, 'address', 'phone', 'website', 'source_url']) });
+        }
       }
       else if (item.type === 'district_update') summary.updated.push({ ...base, record_id: district?.id, fields_changed: previewFields(item, district, districtFields) });
       else if (item.type === 'contact_create' || item.type === 'contact_update') { if (!str(item.contact_name) && !str(item.name) && !str(item.title)) summary.failed.push({ ...base, reason: 'Contact needs at least contact_name or title.' }); if (str(item.role_category) && !roleCategories.some(category => category === str(item.role_category))) summary.warnings.push({ ...base, reason: 'Role category not recognized; it will import as unknown.' }); if (!str(item.email)) summary.warnings.push({ ...base, reason: 'Email is missing. Contact can still be imported with lower confidence.' }); summary.created.push({ ...base, fields_changed: ['contact_name','title','role_category','email','phone'].filter(f=>present(item[f]) || (f==='contact_name' && present(item.name))).map(f=>({field:f,label:fieldLabels[f]??f.replaceAll('_',' '),to:f==='contact_name' ? (item.contact_name ?? item.name) : item[f]})) }); }

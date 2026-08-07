@@ -80,7 +80,7 @@ async function applyDb<T>(promise: PromiseLike<{ data: T | null; error: unknown 
 
 async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Promise<{ ok: true } | { ok: false; table: string; reason: string }> {
   const checks = [
-    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','last_high_school_visit_at','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status','verification_status','nces_id'] },
+    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','last_high_school_visit_at','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status','verification_status','needs_verification','verification_notes','nces_id'] },
     { table: 'contacts', columns: ['school_id','district_id','name','title','email','phone','role_category','source_url','source_notes','imported_by_email','imported_at','updated_at','program_area','confidence_score','extraction_notes'] },
     { table: 'ai_update_runs', columns: ['id','imported_by_email','status','started_at','finished_at','item_count','created_count','updated_count','skipped_count','failed_count','input_hash','original_payload','normalized_payload','result_summary','affected_record_ids'] },
   ];
@@ -143,7 +143,7 @@ async function handlePost(request: NextRequest) {
         if (item.type === 'school_create' && activeSchool) { summary.failed.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(activeSchool.name) ?? 'an existing school') }); continue; }
         if (!activeSchool && (item.type === 'school_create' || item.create_if_missing === true)) {
           const missing = requiredSchoolCreateMissing(item);
-          if (missing.length) { summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Include district_name, county, state, and at least one of city, address, website, or source_url.' }); continue; }
+          if (missing.length) { summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Include school_name and either a district, or city/county/state for safe placeholder-district creation.' }); continue; }
           const duplicate = await likelyDuplicateSchool(db, item);
           if (duplicate) { summary.failed.push({ ...base, record_id: duplicate.id, school_record_id: duplicate.id, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(duplicate.name) ?? 'an existing school') }); continue; }
           const districtResult = await resolveDistrict(db, item);
@@ -152,7 +152,7 @@ async function handlePost(request: NextRequest) {
           const insertResponse = await db.from('schools').insert(payload).select('*').single();
           if (insertResponse.error) throw insertResponse.error;
           activeSchool = insertResponse.data as DbRow;
-          const row={...base, district: str(districtResult.district.name) ?? base.district, record_id: activeSchool.id, school_record_id: activeSchool.id, district_record_id: districtResult.district.id, fields_changed: Object.entries(payload).filter(([, to]) => present(to)).map(([field, to]) => ({ field, label: label(field), to })), message: `Created school needing verification: ${str(activeSchool.name) ?? str(item.school_name) ?? 'New school'}`};
+          const row={...base, district: str(districtResult.district.name) ?? base.district, record_id: activeSchool.id, school_record_id: activeSchool.id, district_record_id: districtResult.district.id, fields_changed: Object.entries(payload).filter(([, to]) => present(to)).map(([field, to]) => ({ field, label: label(field), to })), message: districtResult.placeholder ? `School created. Placeholder district used: ${str(districtResult.district.name)}. needs_verification set. District assignment needs review.` : `Created school needing verification: ${str(activeSchool.name) ?? str(item.school_name) ?? 'New school'}`};
           summary.created.push(row); summary.applied.push(row); summary.verification.schools_verified.push({ school: str(activeSchool.name) ?? str(item.school_name) ?? 'New school', record_id: activeSchool.id, verified_fields: ['name','district_id'] }); addId(summary, activeSchool.id); continue;
         }
         if (!activeSchool) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name) ?? 'missing school_name'}. This item is blocked because create_if_missing is not true.`, suggested_fix: 'Check the school name, include school_id, or intentionally create the school.' }); continue; }

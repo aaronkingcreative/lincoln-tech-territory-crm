@@ -134,7 +134,7 @@ export const cleanExampleJson = {
 export const schemaExample = cleanExampleJson;
 
 export const schoolCreateAllowedFields = [
-  'type','school_name','district_name','county','state','city','phone','website','address','source_url','source_notes','school_type','territory_status','fax','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','overwrite','zip','district_id','school_id','nces_id','verification_status','create_if_missing', ...schoolVisitDateFields,
+  'type','school_name','district_name','county','state','city','phone','website','address','source_url','source_notes','school_type','territory_status','fax','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','overwrite','zip','district_id','school_id','nces_id','verification_status','verification_notes','create_if_missing', ...schoolVisitDateFields,
 ] as const;
 export const schoolUpdateAllowedFields = [...schoolCreateAllowedFields, 'recruiting_priority','relationship_status','enrollment','mascot','graduation_date'] as const;
 
@@ -148,8 +148,13 @@ export function validationMessagesForItem(item: JsonImportItem) {
     for (const field of Object.keys(item)) if (!allowedSet.has(field)) warnings.push(`Unknown field ignored: ${field}`);
   }
   if (item.type === 'school_create') {
-    for (const field of ['school_name','district_name','county','state']) if (typeof item[field] !== 'string' || !item[field].trim()) errors.push(`Missing required field for school_create: ${field}`);
-    if (![item.city, item.address, item.website, item.source_url].some(value => typeof value === 'string' && value.trim())) errors.push('school_create requires at least one of city, address, website, or source_url');
+    if (typeof item.school_name !== 'string' || !item.school_name.trim()) errors.push('Missing required field for school_create: school_name');
+    const hasDistrict = (typeof item.district_name === 'string' && item.district_name.trim().length > 0) || (typeof item.district_id === 'string' && item.district_id.trim().length > 0);
+    if (!hasDistrict) for (const field of ['city','county','state']) if (typeof item[field] !== 'string' || !item[field].trim()) errors.push(`Missing required field for school_create without district_name: ${field}`);
+    else {
+      for (const field of ['county','state']) if (typeof item[field] !== 'string' || !item[field].trim()) errors.push(`Missing required field for school_create: ${field}`);
+      if (![item.city, item.address, item.website, item.source_url].some(value => typeof value === 'string' && value.trim())) errors.push('school_create requires at least one of city, address, website, or source_url');
+    }
   }
   if (item.type === 'school_create' || item.type === 'school_update') {
     const visitDate = schoolVisitDateInput(item);

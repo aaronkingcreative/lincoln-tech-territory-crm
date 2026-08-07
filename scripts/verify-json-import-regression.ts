@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { normalizeImport, validationMessagesForItem } from '../lib/json-import';
-import { requiredSchoolCreateMissing, schoolCreatePayload } from '../lib/school-create';
+import { DISTRICT_VERIFICATION_NOTE, placeholderDistrictName, requiredSchoolCreateMissing, schoolCreatePayload } from '../lib/school-create';
 import { readImportApiResponse } from '../lib/json-import-client';
 import { resolveSchoolMatchFromCandidates } from '../lib/school-matching';
 import { DbRow } from '../lib/coverage';
@@ -36,6 +36,25 @@ async function main() {
     assert(payload[field] !== undefined, `Create payload should include ${field}.`);
   }
   assert(payload.verification_status === 'unverified', 'Create payload should mark the school unverified by default.');
+
+  const officialImport = { type: 'school_update', school_name: 'Official High School', city: 'Boise', county: 'Ada', state: 'ID', source_notes: 'Official Lincoln Tech spreadsheet row.', create_if_missing: true };
+  assert(requiredSchoolCreateMissing(officialImport).length === 0, 'A missing district should not block an official import with school/city/county/state.');
+  assert(placeholderDistrictName('Ada', 'id') === 'District To Verify - Ada County, ID', 'Placeholder district should include normalized county and state.');
+  assert(placeholderDistrictName('Ada County', 'ID') === placeholderDistrictName('Ada', 'ID'), 'Repeated county imports should resolve to the same placeholder district name.');
+  const officialPayload = schoolCreatePayload(officialImport, 'ada-placeholder', 'official-run');
+  assert(officialPayload.needs_verification === true, 'A school without a supplied district should need verification.');
+  assert(officialPayload.verification_status === 'needs_review', 'A school without a supplied district should have needs_review status.');
+  assert(String(officialPayload.verification_notes).includes(DISTRICT_VERIFICATION_NOTE), 'Verification notes should explain that the official source omitted the district.');
+  assert(officialPayload.source_notes === officialImport.source_notes, 'Incoming source notes should be preserved separately.');
+
+  const realDistrictImport = { ...officialImport, district_name: 'Boise School District' };
+  const realDistrictPayload = schoolCreatePayload(realDistrictImport, 'real-district', 'official-run');
+  assert(realDistrictPayload.needs_verification === undefined, 'A supplied real district should not set the placeholder verification flag.');
+  assert(realDistrictPayload.district_id === 'real-district', 'A supplied real district should remain linked by its resolved id.');
+  assert(requiredSchoolCreateMissing({ ...officialImport, school_name: '' }).includes('school_name'), 'Missing school_name should still block creation.');
+  for (const field of ['city', 'county', 'state']) {
+    assert(requiredSchoolCreateMissing({ ...officialImport, [field]: '' }).includes(field), `Missing ${field} without a district should block creation.`);
+  }
 
   const slashVisit = normalizeImport([{ type: 'school_update', school_name: 'Visit Test', hs_last_visit: '8/4/2026' }])[0];
   assert(slashVisit.last_high_school_visit_at === '2026-08-04', 'hs_last_visit should normalize M/D/YYYY dates.');
