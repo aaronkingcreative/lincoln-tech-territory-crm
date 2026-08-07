@@ -62,6 +62,7 @@ alter table schools add column if not exists recruiting_priority text check (rec
 alter table schools add column if not exists relationship_status text check (relationship_status in ('not_started','contacted','warm','active','not_interested','needs_follow_up')) default 'not_started';
 alter table schools add column if not exists last_contacted_at timestamptz;
 alter table schools add column if not exists next_follow_up_at timestamptz;
+alter table schools add column if not exists last_high_school_visit_at date;
 alter table schools add column if not exists outreach_notes text;
 
 create table if not exists programs (id uuid primary key default gen_random_uuid());

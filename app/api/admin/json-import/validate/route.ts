@@ -9,8 +9,8 @@ import { possibleVariantMessage, resolveSchoolMatch } from '@/lib/school-matchin
 import { likelyDuplicateSchool, present, requiredSchoolCreateMissing, resolveDistrict, schoolCreatePayload, schoolCreateFields, str } from '@/lib/school-create';
 
 export const dynamic = 'force-dynamic';
-const fieldLabels: Record<string,string> = { phone:'Phone', website:'Website', address:'Address', city:'City', zip:'ZIP', fax:'Fax', school_type:'School type', territory_status:'Territory status', office_address:'Address' };
-const schoolFields = ['phone','website','address','city','state','zip','fax','source_url','source_notes','recruiting_priority','relationship_status','enrollment','mascot','graduation_date','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes'];
+const fieldLabels: Record<string,string> = { phone:'Phone', website:'Website', address:'Address', city:'City', zip:'ZIP', fax:'Fax', school_type:'School type', territory_status:'Territory status', office_address:'Address', last_high_school_visit_at:'High School Last Visit' };
+const schoolFields = ['phone','website','address','city','state','zip','fax','source_url','source_notes','last_high_school_visit_at','recruiting_priority','relationship_status','enrollment','mascot','graduation_date','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes'];
 const districtFields = ['phone','website','office_address','city','state','zip','superintendent','cte_director','source_url'];
 const empty = (): ImportResultGroups => ({ applied: [], updated: [], created: [], skipped: [], unchanged: [], failed: [], warnings: [] });
 type PreviewRow = Record<string, unknown> & { id?: string; name?: string; district_id?: string };

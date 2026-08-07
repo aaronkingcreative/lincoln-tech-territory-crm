@@ -44,6 +44,40 @@ export type ImportResultGroups = {
   affected_record_ids?: string[];
 };
 
+export const schoolVisitDateFields = ['last_high_school_visit_at', 'hs_last_visit', 'high_school_last_visit', 'last_visit', 'hs_last_visit_date'] as const;
+
+export function normalizeDateOnly(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const input = value.trim();
+  let year: number; let month: number; let day: number;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
+  const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(input);
+  if (iso) { year = Number(iso[1]); month = Number(iso[2]); day = Number(iso[3]); }
+  else if (slash) { month = Number(slash[1]); day = Number(slash[2]); year = Number(slash[3]); }
+  else {
+    const named = /^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/.exec(input);
+    if (!named) return null;
+    const months = ['january','february','march','april','may','june','july','august','september','october','november','december'] as const;
+    const monthName = named[1].toLowerCase();
+    month = months.findIndex((candidate) => candidate === monthName) + 1; day = Number(named[2]); year = Number(named[3]);
+  }
+  if (month < 1 || day < 1) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function schoolVisitDateInput(item: JsonImportItem): { supplied: boolean; value: unknown; normalized: string | null } {
+  for (const field of schoolVisitDateFields) {
+    if (item[field] !== undefined && item[field] !== null && String(item[field]).trim()) return { supplied: true, value: item[field], normalized: normalizeDateOnly(item[field]) };
+  }
+  if (typeof item.source_notes === 'string') {
+    const match = /(?:HS|High School)\s+Last\s+Visit\s*:\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|[A-Za-z]+\s+\d{1,2},\s*\d{4})/i.exec(item.source_notes);
+    if (match) return { supplied: true, value: match[1].trim(), normalized: normalizeDateOnly(match[1]) };
+  }
+  return { supplied: false, value: undefined, normalized: null };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -76,7 +110,14 @@ export function normalizeImport(raw: unknown): JsonImportItem[] {
   return maybeItems.map((item, index) => {
     if (!isRecord(item)) throw new Error(`Import item ${index + 1} must be an object.`);
     if (typeof item.type !== 'string' || item.type.trim().length === 0) throw new Error(`Import item ${index + 1} must include a string type.`);
-    return { ...item, type: item.type.trim(), source_url: typeof item.source_url === 'string' ? item.source_url : item.source_url === null ? null : undefined, source_notes: typeof item.source_notes === 'string' ? item.source_notes : item.source_notes === null ? null : undefined, overwrite: typeof item.overwrite === 'boolean' ? item.overwrite : undefined };
+    const normalized: JsonImportItem = { ...item, type: item.type.trim(), source_url: typeof item.source_url === 'string' ? item.source_url : item.source_url === null ? null : undefined, source_notes: typeof item.source_notes === 'string' ? item.source_notes : item.source_notes === null ? null : undefined, overwrite: typeof item.overwrite === 'boolean' ? item.overwrite : undefined };
+    const visitDate = schoolVisitDateInput(normalized);
+    if (visitDate.normalized) return { ...normalized, last_high_school_visit_at: visitDate.normalized };
+    if (visitDate.supplied && normalized.last_high_school_visit_at !== undefined) {
+      const { last_high_school_visit_at: invalidVisitDate, ...withoutInvalidDate } = normalized;
+      return { ...withoutInvalidDate, hs_last_visit: invalidVisitDate };
+    }
+    return normalized;
   });
 }
 
@@ -93,7 +134,7 @@ export const cleanExampleJson = {
 export const schemaExample = cleanExampleJson;
 
 export const schoolCreateAllowedFields = [
-  'type','school_name','district_name','county','state','city','phone','website','address','source_url','source_notes','school_type','territory_status','fax','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','overwrite','zip','district_id','school_id','nces_id','verification_status','create_if_missing',
+  'type','school_name','district_name','county','state','city','phone','website','address','source_url','source_notes','school_type','territory_status','fax','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','overwrite','zip','district_id','school_id','nces_id','verification_status','create_if_missing', ...schoolVisitDateFields,
 ] as const;
 export const schoolUpdateAllowedFields = [...schoolCreateAllowedFields, 'recruiting_priority','relationship_status','enrollment','mascot','graduation_date'] as const;
 
@@ -109,6 +150,10 @@ export function validationMessagesForItem(item: JsonImportItem) {
   if (item.type === 'school_create') {
     for (const field of ['school_name','district_name','county','state']) if (typeof item[field] !== 'string' || !item[field].trim()) errors.push(`Missing required field for school_create: ${field}`);
     if (![item.city, item.address, item.website, item.source_url].some(value => typeof value === 'string' && value.trim())) errors.push('school_create requires at least one of city, address, website, or source_url');
+  }
+  if (item.type === 'school_create' || item.type === 'school_update') {
+    const visitDate = schoolVisitDateInput(item);
+    if (visitDate.supplied && !visitDate.normalized) warnings.push(`HS Last Visit date could not be parsed: ${String(visitDate.value)}. No visit date will be written.`);
   }
   return { errors, warnings };
 }
