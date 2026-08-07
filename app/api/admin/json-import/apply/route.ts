@@ -18,12 +18,12 @@ type Verification = {
   failed: { target: string; record_id?: string; failures: string[] }[];
 };
 
-const schoolFields = ['phone','website','address','city','state','zip','fax','source_url','source_notes','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','school_type','territory_status','verification_status','nces_id'] as const;
+const schoolFields = ['phone','website','address','city','state','zip','fax','source_url','source_notes','last_high_school_visit_at','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','school_type','territory_status','verification_status','nces_id'] as const;
 const districtFields = ['phone','website','office_address','city','state','zip','superintendent','cte_director','source_url'] as const;
 const result = (): ImportResultGroups & { status?: string; run_id?: string; verification: Verification } => ({ applied: [], updated: [], created: [], skipped: [], unchanged: [], failed: [], warnings: [], affected_record_ids: [], verification: { schools_verified: [], contacts_verified: [], failed: [] } });
 const present = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
 const str = (v: unknown) => typeof v === 'string' && v.trim() ? v.trim() : undefined;
-const label = (f: string) => f.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+const label = (f: string) => f === 'last_high_school_visit_at' ? 'High School Last Visit' : f.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
 const normalize = (v?: string) => v?.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const addId = (r: ImportResultGroups, id?: unknown) => { if (typeof id === 'string' && !r.affected_record_ids?.includes(id)) r.affected_record_ids?.push(id); };
 const log = (runId: string | undefined, event: string, details: Record<string, unknown>) => console.log(JSON.stringify({ scope: 'ai_update_apply', run_id: runId, event, ...details }));
@@ -80,7 +80,7 @@ async function applyDb<T>(promise: PromiseLike<{ data: T | null; error: unknown 
 
 async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Promise<{ ok: true } | { ok: false; table: string; reason: string }> {
   const checks = [
-    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status','verification_status','nces_id'] },
+    { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','last_high_school_visit_at','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status','verification_status','nces_id'] },
     { table: 'contacts', columns: ['school_id','district_id','name','title','email','phone','role_category','source_url','source_notes','imported_by_email','imported_at','updated_at','program_area','confidence_score','extraction_notes'] },
     { table: 'ai_update_runs', columns: ['id','imported_by_email','status','started_at','finished_at','item_count','created_count','updated_count','skipped_count','failed_count','input_hash','original_payload','normalized_payload','result_summary','affected_record_ids'] },
   ];

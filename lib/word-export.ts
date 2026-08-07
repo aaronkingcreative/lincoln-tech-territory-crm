@@ -1,3 +1,4 @@
+import { formatDateOnly } from './date-display';
 import { contactsForSchool, DbRow, hasValue, schoolFlags } from './coverage';
 
 const NOT_AVAILABLE = 'Not available';
@@ -124,7 +125,7 @@ function schoolPage(school: DbRow, contacts: DbRow[]): string {
     <div class="group-path">${display(school.county)} County${optionalText(school.state) ? `, ${display(school.state)}` : ''} &nbsp;|&nbsp; ${escapeHtml(districtName(school))}</div>
     <h1>${display(school.name)}</h1>
     <div class="badges"><span class="badge outreach">Outreach: ${statuses.outreach}</span><span class="badge quality">Data quality: ${statuses.quality}</span></div>
-    <table class="key-info"><tr><th>Address</th><td>${escapeHtml(addressFor(school))}</td><th>Main Phone</th><td>${display(school.phone)}</td></tr><tr><th>Website</th><td>${display(school.website)}</td><th>Enrollment</th><td>${display(school.student_population_total ?? school.enrollment)}</td></tr></table>
+    <table class="key-info"><tr><th>Address</th><td>${escapeHtml(addressFor(school))}</td><th>Main Phone</th><td>${display(school.phone)}</td></tr><tr><th>Website</th><td>${display(school.website)}</td><th>Enrollment</th><td>${display(school.student_population_total ?? school.enrollment)}</td></tr><tr><th>HS Last Visit</th><td colspan="3">${escapeHtml(formatDateOnly(school.last_high_school_visit_at, NOT_AVAILABLE))}</td></tr></table>
     <h2>Contacts</h2>
     <table class="details">
       ${field('Principal', principal)}

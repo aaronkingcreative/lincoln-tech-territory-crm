@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { normalizeImport } from '../lib/json-import';
+import { normalizeImport, validationMessagesForItem } from '../lib/json-import';
 import { requiredSchoolCreateMissing, schoolCreatePayload } from '../lib/school-create';
 import { readImportApiResponse } from '../lib/json-import-client';
 import { resolveSchoolMatchFromCandidates } from '../lib/school-matching';
@@ -36,6 +36,17 @@ async function main() {
     assert(payload[field] !== undefined, `Create payload should include ${field}.`);
   }
   assert(payload.verification_status === 'unverified', 'Create payload should mark the school unverified by default.');
+
+  const slashVisit = normalizeImport([{ type: 'school_update', school_name: 'Visit Test', hs_last_visit: '8/4/2026' }])[0];
+  assert(slashVisit.last_high_school_visit_at === '2026-08-04', 'hs_last_visit should normalize M/D/YYYY dates.');
+  const isoVisit = normalizeImport([{ type: 'school_update', school_name: 'Visit Test', last_high_school_visit_at: '2026-08-04' }])[0];
+  assert(isoVisit.last_high_school_visit_at === '2026-08-04', 'last_high_school_visit_at should preserve valid ISO dates.');
+  const notesVisit = normalizeImport([{ type: 'school_update', school_name: 'Visit Test', source_notes: 'Imported row. HS Last Visit: 8/4/2026' }])[0];
+  assert(notesVisit.last_high_school_visit_at === '2026-08-04', 'source_notes HS Last Visit should populate the dedicated field.');
+  const badVisit = normalizeImport([{ type: 'school_update', school_name: 'Visit Test', hs_last_visit: 'not a date' }])[0];
+  assert(badVisit.last_high_school_visit_at === undefined, 'Invalid visit dates should not be written.');
+  assert(validationMessagesForItem(badVisit).warnings.some(warning => warning.includes('could not be parsed')), 'Invalid visit dates should produce a warning.');
+
 
 
   assertMatchedAlias('Notus High School', 'Notus Jr/Sr High School', { district_name: 'Notus School District', city: 'Notus', state: 'ID', districts: { name: 'Notus School District' } });
