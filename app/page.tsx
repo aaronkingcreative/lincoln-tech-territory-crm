@@ -91,9 +91,8 @@ export default async function Home() {
   const todayCreated = schools.filter((school) => dateKey(school.ai_created_at) === today).length;
   const contactsToday = contacts.filter((contact) => dateKey(contact.created_at) === today || dateKey(contact.last_ai_update_at) === today).length;
   const failures = asArray(latestSummary.failed);
-  const missingFailures = aiUpdateRuns
-    .slice(0, 5)
-    .some((run) => asArray(asRecord(run.result_summary).failed).some((failure) => /missing|blocked|not created|school/i.test(`${failure.reason} ${failure.type}`)));
+  const latestStarted = typeof latest?.started_at === 'string' ? Date.parse(latest.started_at) : 0;
+  const missingFailures = Date.now() - latestStarted < 7 * 24 * 60 * 60 * 1000 && failures.some((failure) => /missing|blocked|not created|school/i.test(`${failure.reason} ${failure.type}`));
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 pb-24 sm:p-6">
@@ -113,7 +112,7 @@ export default async function Home() {
       <Card>
         <h2 className="text-2xl font-semibold">Progress Command Center</h2>
         <p className="mt-2 rounded-xl border border-sky-900 bg-slate-950 p-3 text-sm text-slate-300">Total schools only increases when a new school is created. Updating existing schools improves the progress bars but does not increase the total.</p>
-        {missingFailures ? <p className="mt-2 rounded-xl border border-amber-700 bg-amber-950/40 p-3 text-sm text-amber-100">Some schools were not created because they were blocked or failed. Review latest AI Assisted Update result.</p> : null}
+        {missingFailures ? <p className="mt-2 rounded-xl border border-amber-700 bg-amber-950/40 p-3 text-sm text-amber-100">A recent update left one or more school items unresolved. The rest of the CRM is available. <Link className="font-semibold underline" href="/admin/json-import">Review the latest update details.</Link></p> : null}
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {progress.cards.map(([label, value, max, explain]) => <Progress key={label} label={label} value={value} max={max} explain={explain}/>)}
         </div>

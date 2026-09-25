@@ -299,3 +299,12 @@ on conflict (school_id, normalized_alias) do update set
   alias = excluded.alias,
   source = excluded.source,
   updated_at = now();
+
+-- Field-note importer provenance (safe additive migration).
+alter table school_notes add column if not exists source_url text;
+alter table school_notes add column if not exists source_notes text;
+alter table recruiting_tasks add column if not exists source_notes text;
+
+-- Keep AI confidence values human-readable and consistent.
+alter table contacts drop constraint if exists contacts_confidence_score_check;
+alter table contacts add constraint contacts_confidence_score_check check (confidence_score in ('high','medium','low'));

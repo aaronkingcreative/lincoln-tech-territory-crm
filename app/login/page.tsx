@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useMemo, useState } from 'react';
 import { createClientBrowser } from '@/lib/supabase';
 
@@ -7,19 +9,21 @@ const APPROVED_ADMIN_EMAILS = new Set(['kenking@northrim.net', 'aking81@gmail.co
 const NOT_APPROVED_MESSAGE = 'This email is not approved for access.';
 
 export default function Login() {
-  const supabase = useMemo(() => createClientBrowser(), []);
+  const supabase = useMemo(() => typeof window === 'undefined' ? null : createClientBrowser(), []);
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
+    if (!supabase) return;
+    const client = supabase;
     let active = true;
 
     async function redirectAuthenticatedAdmin() {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await client.auth.getSession();
 
       if (!active || !session?.user) return;
 
@@ -29,7 +33,7 @@ export default function Login() {
         return;
       }
 
-      await supabase.auth.signOut();
+      await client.auth.signOut();
       if (active) setError(NOT_APPROVED_MESSAGE);
     }
 
@@ -44,6 +48,7 @@ export default function Login() {
 
   async function login() {
     setError('');
+    if (!supabase) { setError('Login is still loading. Please try again.'); return; }
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email,
       options: {

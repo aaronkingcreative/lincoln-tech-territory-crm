@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useMemo, useState } from 'react';
 import { createClientBrowser } from '@/lib/supabase';
 
@@ -11,11 +13,13 @@ const EXPIRED_LINK_MESSAGE =
 type CallbackStatus = 'loading' | 'denied' | 'expired';
 
 export default function AuthCallback() {
-  const supabase = useMemo(() => createClientBrowser(), []);
+  const supabase = useMemo(() => typeof window === 'undefined' ? null : createClientBrowser(), []);
   const [status, setStatus] = useState<CallbackStatus>('loading');
   const [message, setMessage] = useState('Completing secure sign-in...');
 
   useEffect(() => {
+    if (!supabase) return;
+    const client = supabase;
     let active = true;
 
     async function completeSignIn() {
@@ -42,7 +46,7 @@ export default function AuthCallback() {
         return;
       }
 
-      const { error: setSessionError } = await supabase.auth.setSession({
+      const { error: setSessionError } = await client.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       });
@@ -58,12 +62,12 @@ export default function AuthCallback() {
       const {
         data: { user },
         error: getUserError,
-      } = await supabase.auth.getUser();
+      } = await client.auth.getUser();
 
       window.history.replaceState(null, document.title, cleanCallbackUrl);
 
       if (getUserError || !user) {
-        await supabase.auth.signOut();
+        await client.auth.signOut();
         if (!active) return;
         setStatus('expired');
         setMessage(EXPIRED_LINK_MESSAGE);
@@ -72,7 +76,7 @@ export default function AuthCallback() {
 
       const userEmail = user.email?.toLowerCase() ?? '';
       if (!APPROVED_ADMIN_EMAILS.has(userEmail)) {
-        await supabase.auth.signOut();
+        await client.auth.signOut();
         if (!active) return;
         setStatus('denied');
         setMessage(ACCESS_DENIED_MESSAGE);
