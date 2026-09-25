@@ -49,12 +49,27 @@ async function main() {
 
   const realDistrictImport = { ...officialImport, district_name: 'Boise School District' };
   const realDistrictPayload = schoolCreatePayload(realDistrictImport, 'real-district', 'official-run');
-  assert(realDistrictPayload.needs_verification === undefined, 'A supplied real district should not set the placeholder verification flag.');
+  assert(realDistrictPayload.needs_verification === true, 'A school missing its address should still need verification even with a supplied district.');
   assert(realDistrictPayload.district_id === 'real-district', 'A supplied real district should remain linked by its resolved id.');
   assert(requiredSchoolCreateMissing({ ...officialImport, school_name: '' }).includes('school_name'), 'Missing school_name should still block creation.');
-  for (const field of ['city', 'county', 'state']) {
-    assert(requiredSchoolCreateMissing({ ...officialImport, [field]: '' }).includes(field), `Missing ${field} without a district should block creation.`);
-  }
+  const fieldOnly = normalizeImport([{ type: 'school_create', school: 'Field Note High', source_notes: 'Ken field visit note.' }])[0];
+  assert(fieldOnly.school_name === 'Field Note High', 'school should normalize to school_name.');
+  assert(requiredSchoolCreateMissing(fieldOnly).length === 0, 'A field-note source is enough context to create a school.');
+  const fieldPayload = schoolCreatePayload(fieldOnly, 'unknown-placeholder');
+  assert(fieldPayload.needs_verification === true && fieldPayload.territory_status === 'included', 'Incomplete field-created schools should be included and need verification.');
+  assert(placeholderDistrictName() === 'District To Verify - Unknown Location', 'Unknown locations should reuse one placeholder district.');
+  assert(placeholderDistrictName('', 'ID') === 'District To Verify - Unknown County, ID', 'State-only schools should reuse a state placeholder district.');
+
+  const aliases = normalizeImport([
+    { type: 'contact_create', high_school_name: 'Alias High', full_name: 'Alex Smith', confidence: 'high' },
+    { type: 'contact_create', school_name: 'Alias High', name: 'Jordan Smith', confidence_score: 'medium' },
+    { type: 'task_create', school: 'Alias High', title: 'Call back', description: 'Ask about welding.' },
+    { type: 'district_update', district: 'Alias District' },
+  ]);
+  assert(aliases[0].school_name === 'Alias High' && aliases[0].contact_name === 'Alex Smith' && aliases[0].confidence_score === 'high', 'Contact and confidence aliases should normalize.');
+  assert(aliases[1].contact_name === 'Jordan Smith' && aliases[1].confidence_score === 'medium', 'name and confidence_score should remain accepted.');
+  assert(aliases[2].notes === 'Ask about welding.', 'Task description should normalize to notes.');
+  assert(aliases[3].district_name === 'Alias District', 'district should normalize to district_name.');
 
   const slashVisit = normalizeImport([{ type: 'school_update', school_name: 'Visit Test', hs_last_visit: '8/4/2026' }])[0];
   assert(slashVisit.last_high_school_visit_at === '2026-08-04', 'hs_last_visit should normalize M/D/YYYY dates.');

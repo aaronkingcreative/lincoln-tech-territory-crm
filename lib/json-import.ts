@@ -71,9 +71,16 @@ export function schoolVisitDateInput(item: JsonImportItem): { supplied: boolean;
   for (const field of schoolVisitDateFields) {
     if (item[field] !== undefined && item[field] !== null && String(item[field]).trim()) return { supplied: true, value: item[field], normalized: normalizeDateOnly(item[field]) };
   }
-  if (typeof item.source_notes === 'string') {
-    const match = /(?:HS|High School)\s+Last\s+Visit\s*:\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|[A-Za-z]+\s+\d{1,2},\s*\d{4})/i.exec(item.source_notes);
+  const noteText = [item.source_notes, item.note, item.notes].filter((value): value is string => typeof value === 'string').join('\n');
+  if (noteText) {
+    const match = /(?:(?:HS|High School)\s+Last\s+Visit|visit date)\s*:\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|[A-Za-z]+\s+\d{1,2},\s*\d{4})/i.exec(noteText);
     if (match) return { supplied: true, value: match[1].trim(), normalized: normalizeDateOnly(match[1]) };
+    const relative = /\bvisited\s+(today|yesterday)\b/i.exec(noteText)?.[1]?.toLowerCase();
+    if (relative) {
+      const date = new Date();
+      if (relative === 'yesterday') date.setUTCDate(date.getUTCDate() - 1);
+      return { supplied: true, value: relative, normalized: date.toISOString().slice(0, 10) };
+    }
   }
   return { supplied: false, value: undefined, normalized: null };
 }
@@ -111,6 +118,13 @@ export function normalizeImport(raw: unknown): JsonImportItem[] {
     if (!isRecord(item)) throw new Error(`Import item ${index + 1} must be an object.`);
     if (typeof item.type !== 'string' || item.type.trim().length === 0) throw new Error(`Import item ${index + 1} must include a string type.`);
     const normalized: JsonImportItem = { ...item, type: item.type.trim(), source_url: typeof item.source_url === 'string' ? item.source_url : item.source_url === null ? null : undefined, source_notes: typeof item.source_notes === 'string' ? item.source_notes : item.source_notes === null ? null : undefined, overwrite: typeof item.overwrite === 'boolean' ? item.overwrite : undefined };
+    // ChatGPT commonly uses these natural-language aliases. Canonicalize them once
+    // so preview and apply always operate on precisely the same values.
+    if (normalized.school_name === undefined) normalized.school_name = normalized.school ?? normalized.high_school_name;
+    if (normalized.district_name === undefined) normalized.district_name = normalized.district;
+    if (normalized.contact_name === undefined) normalized.contact_name = normalized.name ?? normalized.full_name;
+    if (normalized.confidence_score === undefined) normalized.confidence_score = normalized.confidence;
+    if (normalized.type === 'task_create' && normalized.notes === undefined) normalized.notes = normalized.description;
     const visitDate = schoolVisitDateInput(normalized);
     if (visitDate.normalized) return { ...normalized, last_high_school_visit_at: visitDate.normalized };
     if (visitDate.supplied && normalized.last_high_school_visit_at !== undefined) {
@@ -149,12 +163,7 @@ export function validationMessagesForItem(item: JsonImportItem) {
   }
   if (item.type === 'school_create') {
     if (typeof item.school_name !== 'string' || !item.school_name.trim()) errors.push('Missing required field for school_create: school_name');
-    const hasDistrict = (typeof item.district_name === 'string' && item.district_name.trim().length > 0) || (typeof item.district_id === 'string' && item.district_id.trim().length > 0);
-    if (!hasDistrict) for (const field of ['city','county','state']) if (typeof item[field] !== 'string' || !item[field].trim()) errors.push(`Missing required field for school_create without district_name: ${field}`);
-    else {
-      for (const field of ['county','state']) if (typeof item[field] !== 'string' || !item[field].trim()) errors.push(`Missing required field for school_create: ${field}`);
-      if (![item.city, item.address, item.website, item.source_url].some(value => typeof value === 'string' && value.trim())) errors.push('school_create requires at least one of city, address, website, or source_url');
-    }
+    if (![item.city,item.county,item.state,item.address,item.phone,item.website,item.source_notes,item.note].some(value => typeof value === 'string' && value.trim())) errors.push('school_create requires school_name plus at least one location, phone, website, source_notes, or note value.');
   }
   if (item.type === 'school_create' || item.type === 'school_update') {
     const visitDate = schoolVisitDateInput(item);

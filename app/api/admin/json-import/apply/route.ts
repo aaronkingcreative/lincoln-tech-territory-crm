@@ -82,6 +82,10 @@ async function verifyApplySchema(db: ReturnType<typeof createServiceClient>): Pr
   const checks = [
     { table: 'schools', columns: ['address','phone','website','special_programs','program_notes','cte_programs','shop_programs','trades_programs','career_programs','school_profile_notes','bell_schedule','bell_schedule_url','student_population_total','grade_enrollment','enrollment_source_url','enrollment_notes','source_url','source_notes','last_high_school_visit_at','updated_at','last_ai_update_at','last_ai_update_run_id','city','state','zip','fax','school_type','territory_status','verification_status','needs_verification','verification_notes','nces_id'] },
     { table: 'contacts', columns: ['school_id','district_id','name','title','email','phone','role_category','source_url','source_notes','imported_by_email','imported_at','updated_at','program_area','confidence_score','extraction_notes'] },
+    { table: 'school_notes', columns: ['id','school_id','created_by_email','note_type','note','source_url','source_notes'] },
+    { table: 'recruiting_tasks', columns: ['id','title','description','notes','task_scope','school_id','district_id','contact_id','status','priority','due_date','created_by_email','source_url','source_notes'] },
+    { table: 'contact_logs', columns: ['id','school_id','contact_id','district_id','contacted_by_email','contact_method','outcome','notes','contacted_at'] },
+    { table: 'source_urls', columns: ['id','school_id','district_id','url','page_title','notes'] },
     { table: 'ai_update_runs', columns: ['id','imported_by_email','status','started_at','finished_at','item_count','created_count','updated_count','skipped_count','failed_count','input_hash','original_payload','normalized_payload','result_summary','affected_record_ids'] },
   ];
   for (const check of checks) {
@@ -123,7 +127,7 @@ async function handlePost(request: NextRequest) {
   log(summary.run_id, 'started', { commit_mode: commitMode, input_hash: inputHash, retry_mode: commitMode.includes('retry'), item_count: items.length, contact_create_count: contactCreateCount, uses_service_role_client: true, new_run_id: summary.run_id });
 
   for (const [index, item] of items.entries()) {
-    const schoolMatchResult = await resolveSchoolMatch(db, item); const schoolMatch = schoolMatchResult.status === 'matched' ? schoolMatchResult.match : null; const school = schoolMatch?.school ?? null; const district = await findDistrict(db, item, school); const contactName = str(item.contact_name) ?? str(item.name);
+    const schoolMatchResult = await resolveSchoolMatch(db, item); const schoolMatch = schoolMatchResult.status === 'matched' ? schoolMatchResult.match : null; const school = schoolMatch?.school ?? null; const district = await findDistrict(db, item, school); const contactName = str(item.contact_name) ?? str(item.name) ?? str(item.full_name);
     const baseWarnings = schoolMatch?.warnings ?? [];
     const aliasMatchNote = baseWarnings.join(' ');
     const base = { item_index: index, type: item.type, target_name: str(item.school_name) ?? str(item.district_name) ?? contactName ?? str(item.title), school: str(school?.name) ?? str(item.school_name), district: str(district?.name) ?? str(item.district_name), source_url: item.source_url, warnings: baseWarnings.length ? baseWarnings : undefined };
@@ -140,7 +144,6 @@ async function handlePost(request: NextRequest) {
       if (!typeInfo.importable) { summary.warnings.push({ ...base, reason: 'This item type is recognized but not importable yet.' }); summary.skipped.push({ ...base, reason: 'Recognized but not importable yet.' }); continue; }
       if (item.type === 'school_update' || item.type === 'school_create') {
         let activeSchool = school;
-        if (item.type === 'school_create' && activeSchool) { summary.failed.push({ ...base, record_id: activeSchool.id, school_record_id: activeSchool.id, reason: possibleVariantMessage(str(item.school_name) ?? 'Incoming school', str(activeSchool.name) ?? 'an existing school') }); continue; }
         if (!activeSchool && (item.type === 'school_create' || item.create_if_missing === true)) {
           const missing = requiredSchoolCreateMissing(item);
           if (missing.length) { summary.failed.push({ ...base, reason: `Will not create school; missing required fields: ${missing.join(', ')}.`, suggested_fix: 'Include school_name and either a district, or city/county/state for safe placeholder-district creation.' }); continue; }
@@ -179,9 +182,9 @@ async function handlePost(request: NextRequest) {
         const title = str(item.title); if (!contactName && !title) { summary.failed.push({ ...base, reason: 'Contact needs at least name/contact_name or title.' }); continue; }
         if (str(item.school_name) && !school) { summary.failed.push({ ...base, reason: `School not found: ${str(item.school_name)}`, suggested_fix: 'Check school_name or import the school before creating this contact.' }); continue; }
         const email = str(item.email), phone = str(item.phone), role = inferRole(title, str(item.role_category));
-        const { data: candidates } = await db.from('contacts').select('*').eq('school_id', school?.id ?? '').ilike('name', contactName ?? '').ilike('title', title ?? '');
-        const existing = ((candidates ?? []) as DbRow[]).find(c => normalize(str(c.name)) === normalize(contactName) && normalize(str(c.title)) === normalize(title));
-        const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name: contactName, title, email, phone, role_category: role, program_area: role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: confidenceScore(item), extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
+        const { data: candidates } = contactName ? await db.from('contacts').select('*').eq('school_id', school?.id ?? '').ilike('name', contactName) : { data: [] };
+        const existing = ((candidates ?? []) as DbRow[]).find(c => normalize(str(c.name)) === normalize(contactName));
+        const payload = { school_id: school?.id, district_id: district?.id ?? school?.district_id, name: contactName, title, email, phone, role_category: role, program_area: str(item.program_area) ?? role, source_url: str(item.source_url), source_notes: str(item.source_notes), confidence_score: confidenceScore(item), extraction_notes: 'manual_json_import', imported_by_email: admin.email, imported_at: new Date().toISOString() };
         log(summary.run_id, 'contact_payload_normalized', { item_index: index, contact: contactName, raw_confidence_score: item.confidence_score, raw_confidence: item.confidence, confidence_score: payload.confidence_score });
         if (existing) {
           const c = changesFor({ ...payload, overwrite: true }, existing, Object.keys(payload));
@@ -203,7 +206,27 @@ async function handlePost(request: NextRequest) {
       } else if (item.type === 'district_update') {
         if (!district) { summary.failed.push({ ...base, reason: `District not found: ${str(item.district_name) ?? 'missing district_name'}` }); continue; }
         const c = changesFor(item, district, districtFields); if (Object.keys(c.update).length) { const updated = await applyDb<DbRow>(db.from('districts').update({ ...c.update, updated_at: new Date().toISOString() }).eq('id', district.id).select('*').maybeSingle()); const failures = verifyFields(updated, c.changed); if (failures.length) summary.failed.push({ ...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, reason: failures.join(' ') }); else { const row={...base, record_id: district.id, fields_changed:c.changed, fields_skipped:c.skipped, message:'Verified database values after update.'}; summary.updated.push(row); summary.applied.push(row); addId(summary, district.id); } } else summary.unchanged.push({ ...base, record_id: district.id, fields_skipped: c.skipped, reason: 'No district fields changed because supplied values were already present, blank, or intentionally preserved.' });
-      } else summary.skipped.push({ ...base, reason: `${item.type} is previewable but this importer does not yet have an apply handler.`, suggested_fix: 'Use a supported update/create handler or ask Aaron to add an apply handler for this item type.' });
+      } else if (item.type === 'school_note_create') {
+        if (!school?.id) { summary.failed.push({ ...base, reason: 'School note was blocked because the school could not be matched.' }); continue; }
+        const note = str(item.note) ?? str(item.notes); if (!note) { summary.failed.push({ ...base, reason: 'School note needs note text.' }); continue; }
+        const data = await applyDb<DbRow>(db.from('school_notes').insert({ school_id: school.id, created_by_email: admin.email, note_type: str(item.note_type) ?? 'general', note, source_url: str(item.source_url), source_notes: str(item.source_notes) }).select('*').single());
+        const row={...base,record_id:data?.id,school_record_id:school.id,note_record_id:data?.id,message:'Added school note.'}; summary.created.push(row); summary.applied.push(row); addId(summary,school.id);
+      } else if (item.type === 'task_create') {
+        const title = str(item.title); if (!title) { summary.failed.push({ ...base, reason:'Follow-up task needs a title.' }); continue; }
+        const data = await applyDb<DbRow>(db.from('recruiting_tasks').insert({ title, description:str(item.description) ?? str(item.notes), notes:str(item.notes) ?? str(item.description), task_scope:school?.id?'school':'global', school_id:school?.id, district_id:district?.id, status:str(item.status) ?? 'not_started', priority:str(item.priority) ?? 'medium', due_date:str(item.due_date), created_by_email:admin.email, source_url:str(item.source_url), source_notes:str(item.source_notes) }).select('*').single());
+        const row={...base,record_id:data?.id,task_record_id:data?.id,school_record_id:school?.id,message:'Added follow-up task.'}; summary.created.push(row); summary.applied.push(row); addId(summary,school?.id ?? data?.id);
+      } else if (item.type === 'contact_log_create') {
+        if (!school?.id) { summary.failed.push({ ...base, reason:'Contact log was blocked because the school could not be matched.' }); continue; }
+        let contactId: string | undefined; if (contactName) { const found=await db.from('contacts').select('id').eq('school_id',school.id).ilike('name',contactName).maybeSingle(); contactId=str(found.data?.id); }
+        const data=await applyDb<DbRow>(db.from('contact_logs').insert({ school_id:school.id, district_id:district?.id ?? school.district_id, contact_id:contactId, contacted_by_email:admin.email, contact_method:str(item.contact_method) ?? 'other', outcome:str(item.outcome) ?? 'other', notes:str(item.notes), contacted_at:str(item.contacted_at) ?? new Date().toISOString() }).select('*').single());
+        const row={...base,record_id:data?.id,school_record_id:school.id,message:'Added contact log.'}; summary.created.push(row); summary.applied.push(row); addId(summary,school.id);
+      } else if (item.type === 'school_program_update') {
+        if (!school?.id) { summary.failed.push({ ...base, reason:'Program update was blocked because the school could not be matched.' }); continue; }
+        const c=changesFor(item,school,schoolFields); if (!Object.keys(c.update).length) summary.unchanged.push({...base,record_id:school.id,reason:'No new program information was supplied.'}); else { await applyDb<DbRow>(db.from('schools').update({...c.update,updated_at:new Date().toISOString()}).eq('id',school.id).select('*').single()); const row={...base,record_id:school.id,school_record_id:school.id,fields_changed:c.changed,message:'Updated school program information.'}; summary.updated.push(row); summary.applied.push(row); addId(summary,school.id); }
+      } else if (item.type === 'source_url_create') {
+        const url=str(item.url) ?? str(item.source_url); if (!url) { summary.failed.push({...base,reason:'Source URL item needs url or source_url.'}); continue; }
+        const data=await applyDb<DbRow>(db.from('source_urls').upsert({school_id:school?.id,district_id:district?.id,url,page_title:str(item.page_title),notes:str(item.notes) ?? str(item.source_notes)},{onConflict:'url'}).select('*').single()); const row={...base,record_id:data?.id,school_record_id:school?.id,message:'Added source URL.'}; summary.created.push(row); summary.applied.push(row); addId(summary,school?.id ?? data?.id);
+      } else summary.skipped.push({ ...base, reason: `${item.type} is recognized but not importable. No database changes were made.`, suggested_fix: 'Send this request to Aaron outside the importer.' });
     } catch (error: unknown) {
       const reason = dbReason(error);
       const rawMessage = String((error as { message?: unknown })?.message ?? reason.reason);
